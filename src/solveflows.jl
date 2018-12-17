@@ -4,6 +4,8 @@ min-cost flow problems, as described in Bertsekas (1998)
 """
 function solveflows!(fp::FlowProblem)
 
+    recalculateimbalances!(fp)
+
     while true
 
         # Find a potential starting point for an augmenting path

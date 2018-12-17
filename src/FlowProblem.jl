@@ -31,7 +31,6 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
     @assert length(costs) == e
     @assert sum(injections) == 0
 
-
     firstfrom = zeros(Int, n)
     firstto = zeros(Int, n)
     nextfrom = Vector{Int}(undef, e)
@@ -40,7 +39,7 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
     for i in 1:e
 
         nodefrom = nodesfrom[i]
-        nodeto = nodesto[i] 
+        nodeto = nodesto[i]
 
         firstfrom[nodefrom] == 0 && (firstfrom[nodefrom] = i)
         firstto[nodeto] == 0 && (firstto[nodeto] = i)
@@ -54,7 +53,7 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
     # imbalances are therefore just injections
     flows = zeros(Int, e)
     prices = zeros(Int, n)
-    imbalances = copy(injections)
+    imbalances = Vector{Int}(undef, n)
 
     S = Vector{Bool}(undef, n)
     L = Vector{Bool}(undef, n)
