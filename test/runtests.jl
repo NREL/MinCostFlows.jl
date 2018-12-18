@@ -4,6 +4,8 @@ using LinearAlgebra
 using SparseArrays
 using MathProgBase
 using Clp
+using Profile
+using Random
 
 include("utils.jl")
 
@@ -63,7 +65,7 @@ include("utils.jl")
         N, E = 50, 150
         fp = randomproblem(N, E)
 
-        solveflows!(fp)
+        @profile solveflows!(fp)
         lp = linprog(fp)
         @test dot(fp.flows, fp.costs) == dot(lp.flows, fp.costs)
         @test buildAmatrix(fp) * fp.flows == .-fp.injections
@@ -88,6 +90,36 @@ include("utils.jl")
             @test buildAmatrix(fp) * fp.flows == .-fp.injections
 
         end
+
+    end
+
+    if true
+
+        Profile.clear()
+        println("n = 200, e = 400")
+        Random.seed!(1234)
+        N = 200; E = 400
+        fp = randomproblem(N, E)
+        @profile solveflows!(fp)
+
+        for _ in 1:9
+
+            # Update injections and rebalance at fallback node
+            for n in 1:N
+                updateinjection!(fp, fp.injections[n] + rand(-3:3), n, N+1)
+            end
+
+            # Update flow limits
+            for e in 1:E
+                updateflowlimit!(fp, max(0, fp.limits[e] + rand(-3:3)), e)
+            end
+
+            @profile solveflows!(fp)
+
+        end
+
+        Profile.print(maxdepth=14)
+        #@code_warntype MinCostFlow.dualascendable(fp)
 
     end
 

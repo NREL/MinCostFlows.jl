@@ -53,11 +53,11 @@ Empties the set S and reduces the set L to a single element, `j`
 """
 function resetSL!(fp::FlowProblem, j::Int)
 
-    for i in 1:fp.nodes
-        fp.S[i] && (fp.S[i] = false)
-        fp.L[i] && (fp.L[i] = false)
-    end
+    fill!(fp.S, false)
+    fill!(fp.transS, 0)
 
+    fill!(fp.L, false)
+    # TODO: Consider using transL?
     fp.L[j] = true
 
     return nothing
@@ -73,8 +73,32 @@ function augmentS!(fp::FlowProblem)
     for i in 1:fp.nodes
 
         if fp.L[i] && !fp.S[i]
+
+            # i joins S
             fp.S[i] = true
+
+            ij = fp.firstfrom[i]
+            while ij > 0
+                if fp.S[fp.nodesto[ij]] # i and j are both in S now
+                    fp.transS[ij] = 0
+                else # ij leads out of S
+                    fp.transS[ij] = -1
+                end
+                ij = fp.nextfrom[ij]
+            end
+
+            ji = fp.firstto[i]
+            while ji > 0
+                if fp.S[fp.nodesfrom[ji]] # i and j are both in S now
+                    fp.transS[ji] = 0
+                else # ji leads in to S
+                    fp.transS[ji] = 1
+                end
+                ji = fp.nextto[ji]
+            end
+
             return i
+
         end
 
     end
@@ -91,27 +115,23 @@ function dualascendable(fp::FlowProblem)
 
     x = 0
 
-    for i in findall(fp.S)
+    @inbounds for i in 1:fp.nodes
+        fp.S[i] && (x += fp.injections[i])
+    end
 
-        # Get edges ij
-        ij = fp.firstfrom[i]
-        while ij != 0
-            j = fp.nodesto[ij] # Get node j
-            # j is outside S and ij is active or balanced
-            !fp.S[j] && !isinactive(fp, i, ij, j) && (x -= fp.limits[ij])
-            ij = fp.nextfrom[ij] # Get next ij
+    @inbounds for ij in 1:length(fp.nodesfrom)
+
+        (fp.transS[ij] === 0) && continue
+
+        # ij leads in to S and is active
+        if (fp.transS[ij] === 1) && (fp.reducedcosts[ij] < 0) # Spends a lot of time promoting?
+            x += fp.limits[ij]
+
+        # ij leads out of S and is balanced or active
+        elseif fp.reducedcosts[ij] <= 0 # Spends a lot of time promoting?
+            x -= fp.limits[ij]
+
         end
-
-        # Get edges ji
-        ji = fp.firstto[i]
-        while ji != 0
-            j = fp.nodesfrom[ji] # Get node j
-            # j is outside S and ji is active
-            !fp.S[j] && isactive(fp, j, ji, i) && (x += fp.limits[ji])
-            ji = fp.nextto[ji] # Get next ji
-        end
-
-        x += fp.injections[i]
 
     end
 
@@ -217,8 +237,10 @@ function updateflows!(fp::FlowProblem, startnode::Int, endnode::Int)
     end
 
     # Adjust edge flows as appropriate
-    fp.flows[fp.forwardedges] .+= delta
-    fp.flows[fp.backwardedges] .-= delta
+    for i in 1:length(fp.flows)
+        fp.forwardedges[i] && (fp.flows[i] += delta)
+        fp.backwardedges[i] && (fp.flows[i] -= delta)
+    end
     recalculateimbalances!(fp)
 
     return nothing
@@ -226,13 +248,17 @@ function updateflows!(fp::FlowProblem, startnode::Int, endnode::Int)
 end
 
 """
-Updates the shadow prices of the elements of S (Step 4 in Bertsekas)
+Updates the shadow prices (and potentially flows) of the elements of S
+(Step 4 in Bertsekas)
 """
 function updateprices!(fp::FlowProblem)
 
     gamma = typemax(Int)
 
-    for i in findall(fp.S)
+    # TODO: Convert to use transS
+    for i in 1:length(fp.S)
+
+        fp.S[i] || continue # Only proceed if i is in S
 
         # Cycle through edges ij, determine if edge j is outside of S
         ij = fp.firstfrom[i]
@@ -272,10 +298,31 @@ function updateprices!(fp::FlowProblem)
 
     end
 
-    # Adjust prices
-    fp.shadowprices[fp.S] .+= gamma
-    recalculateimbalances!(fp)
+    # Adjust node prices and edge reduced costs
+    for i in 1:length(fp.S)
+        if fp.S[i]
 
+            # Price is increase by gamma
+            fp.shadowprices[i] += gamma
+
+            # Edges from i have reduced cost decreased by gamma
+            ij = fp.firstfrom[i]
+            while ij > 0
+                fp.reducedcosts[ij] -= gamma
+                ij = fp.nextfrom[ij]
+            end
+
+            # Edges to i have reduced cost increased by gamma
+            ji = fp.firstto[i]
+            while ji > 0
+                fp.reducedcosts[ji] += gamma
+                ji = fp.nextto[ji]
+            end
+
+        end
+    end
+
+    recalculateimbalances!(fp)
     return nothing
 
 end
@@ -289,7 +336,7 @@ isbalanced(fp::FlowProblem, i::Int, ij::Int, j::Int) =
 isactive(fp::FlowProblem, i::Int, ij::Int, j::Int) =
     fp.shadowprices[i] > fp.costs[ij] + fp.shadowprices[j]
 
-# TODO: Probably a faster way
+# TODO: Should probably recalculate these on the fly (whenever flow is updated)
 function recalculateimbalances!(fp::FlowProblem)
 
     fp.imbalances .= fp.injections

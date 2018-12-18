@@ -1,3 +1,29 @@
+# TODO: Create a single vector of structs containing edge/node data
+#       to avoid getindex'ing all the time
+
+#mutable struct Edge
+#    nodefrom::Node
+#    nodeto::Node
+#    nextfrom::Edge
+#    nextto::Edge
+#    limit::Int
+#    cost::Int
+#    reducedcost::Int
+#    flow::Int
+#    intoS::Bool
+#    outofS::Bool
+#end
+
+#mutable struct Node
+#    firstto::Edge
+#    nextto::Edge
+#    injection::Int
+#    price::Int
+#    imbalance::Int
+#    inS::Bool
+#    inL::Bool
+#end
+
 struct FlowProblem
    nodes::Int
    nodesfrom::Vector{Int}
@@ -17,6 +43,8 @@ struct FlowProblem
    labels::Vector{Int}
    forwardedges::Vector{Bool}
    backwardedges::Vector{Bool}
+   reducedcosts::Vector{Int}
+   transS::Vector{Int}
 end
 
 function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
@@ -60,10 +88,12 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
     labels = Vector{Int}(undef, n)
     forwardedges = Vector{Bool}(undef, e)
     backwardedges = Vector{Bool}(undef, e)
+    reducedcosts = copy(costs)
+    transS = Vector{Int}(undef, e)
 
     return FlowProblem(
         n, nodesfrom, nodesto, firstfrom, firstto, nextfrom, nextto,
         limits, costs, injections, flows, prices, imbalances,
-        S, L, labels, forwardedges, backwardedges)
+        S, L, labels, forwardedges, backwardedges, reducedcosts, transS)
 
 end
