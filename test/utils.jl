@@ -13,6 +13,21 @@ function randomproblem(n::Int, e::Int)
     nodesfrom = rand(1:n, e)
     nodesto = nodesfrom .+ rand(1:(n-1), e)
     map!(i -> i > n ? i - n : i, nodesto, nodesto)
+
+    # Eliminate duplicate edges
+    fromtos = Tuple{Int,Int}[]
+    fromto_idxs = Int[]
+    for i in 1:e
+        fromto = (nodesfrom[i], nodesto[i])
+        fromto in fromtos && continue
+        push!(fromtos, fromto)
+        push!(fromto_idxs, i)
+    end
+
+    e = length(fromto_idxs)
+    nodesfrom = nodesfrom[fromto_idxs]
+    nodesto = nodesto[fromto_idxs]
+
     flowlimits = rand(1:20, e)
     flowcosts = rand(1:5, e)
     injections = rand(-20:20, n)
@@ -79,25 +94,4 @@ function buildAmatrix(fp::FlowProblem)
 
     return sparse(Is, Js, Vs)
 
-end
-
-function complementarityslackness(fp::FlowProblem)
-    for edge in fp.edges
-
-        # Check condition for active arcs
-        if (edge.reducedcost < 0) && (edge.flow != edge.limit)
-            return false
-
-        # Check condition for balanced arcs
-        elseif (edge.reducedcost == 0) && (edge.flow < 0 || edge.flow > edge.limit)
-            return false
-
-        # Check condition for inactive arcs
-        elseif (edge.reducedcost > 0) && (edge.flow != 0)
-            return false
-
-        end
-
-    end
-    return true
 end

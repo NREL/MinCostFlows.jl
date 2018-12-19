@@ -4,13 +4,19 @@ min-cost flow problems, as described in Bertsekas (1998)
 """
 function solveflows!(fp::FlowProblem)
 
+    elist = edgelist(fp)
+
     recalculateimbalances!(fp)
 
-    i = 0
     while true
 
-        #println("Flows: ", flows(fp))
-        #println("Prices: ", prices(fp))
+        println(elist)
+        println("Costs: ", costs(fp))
+        println("Limits: ", limits(fp))
+        println("Flows: ", flows(fp))
+        println("Injections: ", injections(fp))
+        println("Prices: ", prices(fp))
+        @assert complementarityslackness(fp)
         #println("Starting major iteration")
 
         # Find a potential starting node for an augmenting path
@@ -21,12 +27,12 @@ function solveflows!(fp::FlowProblem)
 
         # Reset the scan sets for this iteration
         resetSL!(fp, augmentingpathstart)
+        lengthSinout(fp)
         #showSL(fp)
 
         # Main iteration: update either flows or shadow prices
         update!(fp, augmentingpathstart)
 
-        i += 1
     end
 
 end
@@ -39,6 +45,7 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
 
         # Look for a candidate node i to scan and add to S
         i = augmentS!(fp)
+        lengthSinout(fp)
         #showSL(fp)
 
         # Update prices if it will improve the dual solution
@@ -112,7 +119,7 @@ function augmentS!(fp::FlowProblem)
             i.inS = true
 
             ij = i.firstfrom
-            while ij != nothing
+            while ij !== nothing
                 if ij.nodeto.inS # i and j are both in S now
                     # Extract ij from the intoS linked list
                     if ij.previntoS === nothing # ij is the first element of the list
@@ -135,7 +142,7 @@ function augmentS!(fp::FlowProblem)
             end
 
             ji = i.firstto
-            while ji != nothing
+            while ji !== nothing
                 if ji.nodefrom.inS # j and i are both in S now
                     # Extract ji from the outofS linked list
                     if ji.prevoutofS === nothing # ji is the first element of the list
@@ -286,7 +293,7 @@ function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
     end
 
     # Traverse the labels backwards to startnode
-    while currentnode != startnode
+    while currentnode !== startnode
 
         # Determine edge direction and move to previous node
         ab = currentnode.label # Get edge
@@ -356,14 +363,14 @@ function updateprices!(fp::FlowProblem)
 
             # Edges from i have reduced cost decreased by gamma
             ij = i.firstfrom
-            while ij != nothing
+            while ij !== nothing
                 ij.reducedcost -= gamma
                 ij = ij.nextfrom
             end
 
             # Edges to i have reduced cost increased by gamma
             ji = i.firstto
-            while ji != nothing
+            while ji !== nothing
                 ji.reducedcost += gamma
                 ji = ji.nextto
             end

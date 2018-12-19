@@ -16,10 +16,10 @@ include("utils.jl")
         @testset "Bertsekas page 220" begin
 
             fp = FlowProblem([1,2], [2,3], [5,5], [0,1], [1,0,-1])
-            @test complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
             solveflows!(fp)
-            @test complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
             @test flows(fp) == [1,1]
             @test prices(fp) == [1,1,0]
 
@@ -32,10 +32,10 @@ include("utils.jl")
 
             fp = FlowProblem([1,1,2,3,2,3], [2,3,3,2,4,4], [2,2,3,2,1,5],
                               [5,1,4,3,2,0], [3,2,-1,-4])
-            @test complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
             solveflows!(fp)
-            @test complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
             @test flows(fp) == [1,2,2,0,1,3]
             @test prices(fp) == [9,4,0,0]
 
@@ -49,10 +49,10 @@ include("utils.jl")
             fp = FlowProblem([1,1,2,2,2,3,5,4,5], [2,3,3,4,5,5,4,6,6],
                              [8,3,3,7,2,3,4,5,6], [3,2,2,5,2,4,5,3,4],
                              [9,0,0,0,0,-9])
-            @test complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
             solveflows!(fp)
-            @test complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
             @test flows(fp) == [6,3,0,4,2,3,0,4,5]
 
             lp = linprog(fp)
@@ -68,15 +68,16 @@ include("utils.jl")
     # fact feasible.
     @testset "Random Networks" begin
     
-        N, E = 5, 15
+        N, E = 4, 4
 
-        for _ in 1:25
+        for i in 1:250
 
+            println("Random Network $i")
             fp = randomproblem(N, E)
-            @test complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
             solveflows!(fp)
-            @test complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
 
             lp = linprog(fp)
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
@@ -90,18 +91,20 @@ include("utils.jl")
 
         N, E = 20, 40
 
-        fp = randomproblem(N, E)
-        @test complementarityslackness(fp) # Initialization should satisfy CS
+        #fp = randomproblem(N, E)
+        #@test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
-        solveflows!(fp)
-        @test complementarityslackness(fp) # Solving should preserve CS
+        #solveflows!(fp)
+        #@test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
 
-        lp = linprog(fp)
-        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
-        @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
+        #lp = linprog(fp)
+        #@test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        #@test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         # Randomly modify problem and re-solve
-        for _ in 1:25
+        for i in 1:0
+
+            println("Random Hotstart $i")
 
             # Update injections and rebalance at fallback node
             for n in 1:N
@@ -115,11 +118,11 @@ include("utils.jl")
             end
 
             # Ensure updates preserved CS
-            @test complementarityslackness(fp)
+            @test MinCostFlow.complementarityslackness(fp)
 
             # Re-solve
             solveflows!(fp)
-            @test complementarityslackness(fp)
+            @test MinCostFlow.complementarityslackness(fp)
 
             lp = linprog(fp)
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
