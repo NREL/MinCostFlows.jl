@@ -2,24 +2,27 @@
 Change injections on `targetnode` to `newinj` for a FlowProblem `fp`,
 automatically adjusting `slacknode` to compensate.
 """
-function updateinjection!(fp::FlowProblem, newinj::Int, targetnode::Int, slacknode::Int)
-    change = newinj - fp.injections[targetnode]
-    fp.injections[targetnode] += change
-    fp.injections[slacknode] -= change
+function updateinjection!(targetnode::Node, slacknode::Node, newinj::Int)
+
+    change = newinj - targetnode.injection
+
+    targetnode.injection += change
+    slacknode.injection -= change
+
     return
+
 end
 
 """
 Change line limit on `edge` to `value` for a FlowProblem `fp`.
 """
-function updateflowlimit!(fp::FlowProblem, newlimit::Int, edge::Int)
+function updateflowlimit!(edge::Edge{Node}, newlimit::Int)
 
-    if (newlimit < fp.flows[edge]) ||
-        isactive(fp, fp.nodesfrom[edge], edge, fp.nodesto[edge])
-        fp.flows[edge] = newlimit
+    if (newlimit < edge.flow) || (edge.reducedcost < 0)
+        edge.flow = newlimit
     end
 
-    fp.limits[edge] = newlimit
+    edge.limit = newlimit
 
     return
 

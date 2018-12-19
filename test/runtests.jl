@@ -16,13 +16,15 @@ include("utils.jl")
         @testset "Bertsekas page 220" begin
 
             fp = FlowProblem([1,2], [2,3], [5,5], [0,1], [1,0,-1])
+            @test complementarityslackness(fp) # Initialization should satisfy CS
 
             solveflows!(fp)
-            @test fp.flows == [1,1]
-            @test fp.shadowprices == [1,1,0]
+            @test complementarityslackness(fp) # Solving should preserve CS
+            @test flows(fp) == [1,1]
+            @test prices(fp) == [1,1,0]
 
             lp = linprog(fp)
-            @test fp.flows == lp.flows
+            @test flows(fp) == lp.flows
 
         end
 
@@ -30,13 +32,15 @@ include("utils.jl")
 
             fp = FlowProblem([1,1,2,3,2,3], [2,3,3,2,4,4], [2,2,3,2,1,5],
                               [5,1,4,3,2,0], [3,2,-1,-4])
+            @test complementarityslackness(fp) # Initialization should satisfy CS
 
             solveflows!(fp)
-            @test fp.flows == [1,2,2,0,1,3]
-            @test fp.shadowprices == [9,4,0,0]
+            @test complementarityslackness(fp) # Solving should preserve CS
+            @test flows(fp) == [1,2,2,0,1,3]
+            @test prices(fp) == [9,4,0,0]
 
             lp = linprog(fp)
-            @test fp.flows == lp.flows
+            @test flows(fp) == lp.flows
 
         end
 
@@ -45,12 +49,14 @@ include("utils.jl")
             fp = FlowProblem([1,1,2,2,2,3,5,4,5], [2,3,3,4,5,5,4,6,6],
                              [8,3,3,7,2,3,4,5,6], [3,2,2,5,2,4,5,3,4],
                              [9,0,0,0,0,-9])
+            @test complementarityslackness(fp) # Initialization should satisfy CS
 
             solveflows!(fp)
-            @test fp.flows == [6,3,0,4,2,3,0,4,5]
+            @test complementarityslackness(fp) # Solving should preserve CS
+            @test flows(fp) == [6,3,0,4,2,3,0,4,5]
 
             lp = linprog(fp)
-            @test fp.flows == lp.flows
+            @test flows(fp) == lp.flows
 
         end
 
@@ -62,42 +68,73 @@ include("utils.jl")
     # fact feasible.
     @testset "Random Networks" begin
     
-        N, E = 50, 150
-        fp = randomproblem(N, E)
+        N, E = 5, 15
 
-        @profile solveflows!(fp)
-        lp = linprog(fp)
-        @test dot(fp.flows, fp.costs) == dot(lp.flows, fp.costs)
-        @test buildAmatrix(fp) * fp.flows == .-fp.injections
+        for _ in 1:25
 
-        # Randomly modify problem and re-solve
-        for _ in 1:20
+            fp = randomproblem(N, E)
+            @test complementarityslackness(fp) # Initialization should satisfy CS
 
-            # Update injections and rebalance at fallback node
-            for n in 1:N
-                updateinjection!(fp, fp.injections[n] + rand(-3:3), n, N+1)
-            end
-
-            # Update flow limits
-            for e in 1:E
-                updateflowlimit!(fp, max(0, fp.limits[e] + rand(-3:3)), e)
-            end
-
-            # Resolve
             solveflows!(fp)
+            @test complementarityslackness(fp) # Solving should preserve CS
+
             lp = linprog(fp)
-            @test dot(fp.flows, fp.costs) == dot(lp.flows, fp.costs)
-            @test buildAmatrix(fp) * fp.flows == .-fp.injections
+            @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+            @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         end
 
     end
 
-    if true
+    @testset "Random Hotstarts" begin
 
+        N, E = 20, 40
+
+        fp = randomproblem(N, E)
+        @test complementarityslackness(fp) # Initialization should satisfy CS
+
+        solveflows!(fp)
+        @test complementarityslackness(fp) # Solving should preserve CS
+
+        lp = linprog(fp)
+        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
+
+        # Randomly modify problem and re-solve
+        for _ in 1:25
+
+            # Update injections and rebalance at fallback node
+            for n in 1:N
+                updateinjection!(fp.nodes[n], fp.nodes[N+1],
+                                 fp.nodes[n].injection + rand(-3:3))
+            end
+
+            # Update flow limits
+            for e in 1:E
+                updateflowlimit!(fp.edges[e], max(0, fp.edges[e].limit + rand(-3:3)))
+            end
+
+            # Ensure updates preserved CS
+            @test complementarityslackness(fp)
+
+            # Re-solve
+            solveflows!(fp)
+            @test complementarityslackness(fp)
+
+            lp = linprog(fp)
+            @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+            @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
+
+        end
+
+    end
+
+    if false
+
+        Random.seed!(1234)
+        @profile zeros(1)
         Profile.clear()
         println("n = 200, e = 400")
-        Random.seed!(1234)
         N = 200; E = 400
         fp = randomproblem(N, E)
         @profile solveflows!(fp)
@@ -106,12 +143,13 @@ include("utils.jl")
 
             # Update injections and rebalance at fallback node
             for n in 1:N
-                updateinjection!(fp, fp.injections[n] + rand(-3:3), n, N+1)
+                updateinjection!(fp.nodes[n], fp.nodes[N+1],
+                                 fp.nodes[n].injection + rand(-3:3))
             end
 
             # Update flow limits
             for e in 1:E
-                updateflowlimit!(fp, max(0, fp.limits[e] + rand(-3:3)), e)
+                updateflowlimit!(fp.edges[e], max(0, fp.edges[e].limit + rand(-3:3)))
             end
 
             @profile solveflows!(fp)
@@ -124,3 +162,4 @@ include("utils.jl")
     end
 
 end
+

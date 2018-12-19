@@ -4,7 +4,9 @@ export
     FlowProblem,
     solveflows!,
     updateinjection!,
-    updateflowlimit!
+    updateflowlimit!,
+    flows, costs, limits,
+    injections, prices
 
 include("FlowProblem.jl")
 include("solveflows.jl")

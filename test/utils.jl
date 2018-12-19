@@ -43,41 +43,35 @@ function MathProgBase.linprog(fp::FlowProblem)
     
     A = buildAmatrix(fp)
 
-    #display(full(A)); println()
-    #display(fp.injections); println()
-    #display(fp.limits); println()
-    #display([full(A) .-fp.injections])
+    result = linprog(Vector{Float64}(costs(fp)), A, '=', Vector{Float64}(.-injections(fp)),
+                     0., Vector{Float64}(limits(fp)), ClpSolver())
 
-    # Solve the LP
-    # println("Net injection: ", sum(fp.injections))
-    # display(fp.injections); println()
-    result = linprog(Vector{Float64}(fp.costs), A, '=', Vector{Float64}(.-fp.injections),
-                     0., Vector{Float64}(fp.limits), ClpSolver())
     (result.status != :Optimal) && error("LP did not solve")
+
     return LPFlowSolution(result.sol, result.attrs[:lambda])
 
 end
 
 function buildAmatrix(fp::FlowProblem)
 
-    n_edges = length(fp.nodesfrom)
-    n_nodes = fp.nodes
+    n_edges = length(fp.edges)
+    n_nodes = length(fp.nodes)
 
-    Is = Vector{Float64}(undef, 2*n_edges)
-    Js = similar(Is)
-    Vs = similar(Is)
+    Is = Vector{Int}(undef, 2*n_edges)
+    Js = Vector{Int}(undef, 2*n_edges)
+    Vs = Vector{Float64}(undef, 2*n_edges)
 
     # Construct the sparse A matrix
-    for ij in 1:n_edges
+    for (ij, edge) in enumerate(fp.edges)
 
-        i = fp.nodesfrom[ij]
-        j = fp.nodesto[ij]
+        i = edge.nodefrom
+        j = edge.nodeto
 
-        Is[2ij-1] = i
+        Is[2ij-1] = findfirst(x -> x === i, fp.nodes)
         Js[2ij-1] = ij
         Vs[2ij-1] = -1
 
-        Is[2ij] = j
+        Is[2ij] = findfirst(x -> x === j, fp.nodes)
         Js[2ij] = ij
         Vs[2ij] = 1
         
@@ -85,4 +79,25 @@ function buildAmatrix(fp::FlowProblem)
 
     return sparse(Is, Js, Vs)
 
+end
+
+function complementarityslackness(fp::FlowProblem)
+    for edge in fp.edges
+
+        # Check condition for active arcs
+        if (edge.reducedcost < 0) && (edge.flow != edge.limit)
+            return false
+
+        # Check condition for balanced arcs
+        elseif (edge.reducedcost == 0) && (edge.flow < 0 || edge.flow > edge.limit)
+            return false
+
+        # Check condition for inactive arcs
+        elseif (edge.reducedcost > 0) && (edge.flow != 0)
+            return false
+
+        end
+
+    end
+    return true
 end

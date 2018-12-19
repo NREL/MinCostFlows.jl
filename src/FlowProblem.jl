@@ -1,50 +1,47 @@
-# TODO: Create a single vector of structs containing edge/node data
-#       to avoid getindex'ing all the time
+abstract type AbstractNode end
 
-#mutable struct Edge
-#    nodefrom::Node
-#    nodeto::Node
-#    nextfrom::Edge
-#    nextto::Edge
-#    limit::Int
-#    cost::Int
-#    reducedcost::Int
-#    flow::Int
-#    intoS::Bool
-#    outofS::Bool
-#end
+mutable struct Edge{T<:AbstractNode}
+    nodefrom::T
+    nodeto::T
+    nextfrom::Union{Edge{T},Nothing}
+    nextto::Union{Edge{T},Nothing}
+    previntoS::Union{Edge{T},Nothing}
+    nextintoS::Union{Edge{T},Nothing}
+    prevoutofS::Union{Edge{T},Nothing}
+    nextoutofS::Union{Edge{T},Nothing}
+    limit::Int
+    cost::Int
+    reducedcost::Int
+    flow::Int
+    forward::Bool
+    backward::Bool # TODO: Switch to linked list and eliminate
 
-#mutable struct Node
-#    firstto::Edge
-#    nextto::Edge
-#    injection::Int
-#    price::Int
-#    imbalance::Int
-#    inS::Bool
-#    inL::Bool
-#end
+    Edge{}(from::T, to::T, limit::Int, cost::Int) where {T <: AbstractNode} =
+        new{T}(from, to, nothing, nothing,
+               nothing, nothing, nothing, nothing, limit, cost, cost, 0, false, false)
+end
 
-struct FlowProblem
-   nodes::Int
-   nodesfrom::Vector{Int}
-   nodesto::Vector{Int}
-   firstfrom::Vector{Int}
-   firstto::Vector{Int}
-   nextfrom::Vector{Int}
-   nextto::Vector{Int}
-   limits::Vector{Int}
-   costs::Vector{Int}
-   injections::Vector{Int}
-   flows::Vector{Int}
-   shadowprices::Vector{Int}
-   imbalances::Vector{Int}
-   S::Vector{Bool}
-   L::Vector{Bool}
-   labels::Vector{Int}
-   forwardedges::Vector{Bool}
-   backwardedges::Vector{Bool}
-   reducedcosts::Vector{Int}
-   transS::Vector{Int}
+mutable struct Node <: AbstractNode
+    firstfrom::Union{Edge{Node},Nothing}
+    firstto::Union{Edge{Node},Nothing}
+    label::Union{Edge{Node},Nothing}
+    nextL::Union{Node,Nothing}
+    injection::Int
+    price::Int
+    imbalance::Int
+    inS::Bool
+    inL::Bool
+
+    Node(injection::Int) = new(nothing, nothing, nothing, nothing,
+                               injection, 0, injection, false, false)
+end
+
+mutable struct FlowProblem
+   nodes::Vector{Node}
+   edges::Vector{Edge{Node}}
+   firstL::Union{Node,Nothing}
+   firstintoS::Union{Edge{Node},Nothing}
+   firstoutofS::Union{Edge{Node},Nothing}
 end
 
 function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
@@ -59,41 +56,39 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
     @assert length(costs) == e
     @assert sum(injections) == 0
 
-    firstfrom = zeros(Int, n)
-    firstto = zeros(Int, n)
-    nextfrom = Vector{Int}(undef, e)
-    nextto = Vector{Int}(undef, e)
+    nodes = Node.(injections)
+    edges = Edge.(nodes[nodesfrom], nodes[nodesto], limits, costs)
 
-    for i in 1:e
+    for (e, edge) in enumerate(edges)
 
-        nodefrom = nodesfrom[i]
-        nodeto = nodesto[i]
+        nodefrom = edge.nodefrom
+        nodeto = edge.nodeto
 
-        firstfrom[nodefrom] == 0 && (firstfrom[nodefrom] = i)
-        firstto[nodeto] == 0 && (firstto[nodeto] = i)
+        nodefrom.firstfrom === nothing && (nodefrom.firstfrom = edge)
+        nodeto.firstto === nothing && (nodeto.firstto = edge)
 
-        nextfrom[i] = defzero(findnext(x -> x == nodefrom, nodesfrom, i+1))
-        nextto[i] = defzero(findnext(x -> x == nodeto, nodesto, i+1))
+        edge.nextfrom = next(x -> x.nodefrom === nodefrom, edges, e+1)
+        edge.nextto = next(x -> x.nodeto === nodeto, edges, e+1)
 
     end
 
-    # Initialize flows and prices to zero:
-    # imbalances are therefore just injections
-    flows = zeros(Int, e)
-    prices = zeros(Int, n)
-    imbalances = Vector{Int}(undef, n)
+    return FlowProblem(nodes, edges, nothing, nothing, nothing)
 
-    S = Vector{Bool}(undef, n)
-    L = Vector{Bool}(undef, n)
-    labels = Vector{Int}(undef, n)
-    forwardedges = Vector{Bool}(undef, e)
-    backwardedges = Vector{Bool}(undef, e)
-    reducedcosts = copy(costs)
-    transS = Vector{Int}(undef, e)
+end
 
-    return FlowProblem(
-        n, nodesfrom, nodesto, firstfrom, firstto, nextfrom, nextto,
-        limits, costs, injections, flows, prices, imbalances,
-        S, L, labels, forwardedges, backwardedges, reducedcosts, transS)
+flows(fp::FlowProblem) = getproperty.(fp.edges, :flow)
+costs(fp::FlowProblem) = getproperty.(fp.edges, :cost)
+limits(fp::FlowProblem) = getproperty.(fp.edges, :limit)
+injections(fp::FlowProblem) = getproperty.(fp.nodes, :injection)
+prices(fp::FlowProblem) = getproperty.(fp.nodes, :price)
+
+function next(f::Function, v::Vector, start::Int)
+
+    for i in start:length(v)
+        x = v[i]
+        f(x) && return x
+    end
+
+    return nothing
 
 end
