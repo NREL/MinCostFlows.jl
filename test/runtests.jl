@@ -11,6 +11,8 @@ include("utils.jl")
 
 @testset "MinCostFlow" begin
 
+
+
     @testset "Example networks" begin
 
         @testset "Bertsekas page 220" begin
@@ -68,11 +70,22 @@ include("utils.jl")
     # fact feasible.
     @testset "Random Networks" begin
     
-        N, E = 4, 4
+        @testset "Previously problematic problems" begin
 
-        for i in 1:250
+            fp = FlowProblem([4,3,4,1,1,2,3,4,5,5,5,5], [1,1,2,4,5,5,5,5,1,2,3,4],
+                             [19,9,3,9,9999,9999,9999,9999,9999,9999,9999,9999],
+                             [1,1,5,2,0,0,0,0,9999,9999,9999,9999], [-2,-7,4,-12,17])
+            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
-            println("Random Network $i")
+            solveflows!(fp)
+            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+
+        end
+
+        N, E = 50, 150
+
+        for i in 1:25
+
             fp = randomproblem(N, E)
             @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
@@ -91,20 +104,18 @@ include("utils.jl")
 
         N, E = 20, 40
 
-        #fp = randomproblem(N, E)
-        #@test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+        fp = randomproblem(N, E)
+        @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
 
-        #solveflows!(fp)
-        #@test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+        solveflows!(fp)
+        @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
 
-        #lp = linprog(fp)
-        #@test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
-        #@test buildAmatrix(fp) * flows(fp) == .-injections(fp)
+        lp = linprog(fp)
+        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         # Randomly modify problem and re-solve
-        for i in 1:0
-
-            println("Random Hotstart $i")
+        for i in 1:25
 
             # Update injections and rebalance at fallback node
             for n in 1:N
@@ -138,7 +149,7 @@ include("utils.jl")
         @profile zeros(1)
         Profile.clear()
         println("n = 200, e = 400")
-        N = 200; E = 400
+        N = 20; E = 40
         fp = randomproblem(N, E)
         @profile solveflows!(fp)
 
@@ -160,7 +171,6 @@ include("utils.jl")
         end
 
         Profile.print(maxdepth=14)
-        #@code_warntype MinCostFlow.dualascendable(fp)
 
     end
 

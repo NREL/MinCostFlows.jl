@@ -10,13 +10,13 @@ function solveflows!(fp::FlowProblem)
 
     while true
 
-        println(elist)
-        println("Costs: ", costs(fp))
-        println("Limits: ", limits(fp))
-        println("Flows: ", flows(fp))
-        println("Injections: ", injections(fp))
-        println("Prices: ", prices(fp))
-        @assert complementarityslackness(fp)
+        #println(elist)
+        #println("Costs: ", costs(fp))
+        #println("Limits: ", limits(fp))
+        #println("Flows: ", flows(fp))
+        #println("Injections: ", injections(fp))
+        #println("Prices: ", prices(fp))
+        #@assert complementarityslackness(fp)
         #println("Starting major iteration")
 
         # Find a potential starting node for an augmenting path
@@ -27,8 +27,8 @@ function solveflows!(fp::FlowProblem)
 
         # Reset the scan sets for this iteration
         resetSL!(fp, augmentingpathstart)
-        lengthSinout(fp)
         #showSL(fp)
+        #showSinout(fp)
 
         # Main iteration: update either flows or shadow prices
         update!(fp, augmentingpathstart)
@@ -45,19 +45,19 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
 
         # Look for a candidate node i to scan and add to S
         i = augmentS!(fp)
-        lengthSinout(fp)
         #showSL(fp)
+        #showSinout(fp)
 
         # Update prices if it will improve the dual solution
         # or if there are no nodes left to scan
-        (i == nothing || dualascendable(fp)) && return updateprices!(fp)
+        (i === nothing || dualascendable(fp)) && return updateprices!(fp)
 
         # Label neighbour nodes of i
         augmentingpathend = augmentL!(fp, i)
         #showSL(fp)
 
         # Didn't find an augmenting path, try adding a different node
-        augmentingpathend == nothing && continue
+        augmentingpathend === nothing && continue
 
         # Found an augmenting path, augment flows accordingly
         return updateflows!(fp, augmentingpathstart, augmentingpathend)
@@ -124,8 +124,9 @@ function augmentS!(fp::FlowProblem)
                     # Extract ij from the intoS linked list
                     if ij.previntoS === nothing # ij is the first element of the list
                         fp.firstintoS = ij.nextintoS
+                        fp.firstintoS !== nothing && (fp.firstintoS.previntoS = nothing)
                     else # ij is not the first element of the list
-                        ij.previntoS.nextintoS = ij.nextintoS
+                        ij.previntoS.nextintoS = ij.nextintoS # Slow
                     end
                 else # ij leads out of S
                     # Add ij to the outofS linked list
@@ -133,11 +134,12 @@ function augmentS!(fp::FlowProblem)
                         ij.nextoutofS = nothing
                     else # ij goes to the beginning of an existing list
                         fp.firstoutofS.prevoutofS = ij
-                        ij.nextoutofS = fp.firstoutofS
+                        ij.nextoutofS = fp.firstoutofS # Slow
                     end
                     ij.prevoutofS = nothing
                     fp.firstoutofS = ij
                 end
+                #showSinout(fp)
                 ij = ij.nextfrom
             end
 
@@ -147,20 +149,22 @@ function augmentS!(fp::FlowProblem)
                     # Extract ji from the outofS linked list
                     if ji.prevoutofS === nothing # ji is the first element of the list
                         fp.firstoutofS = ji.nextoutofS
+                        fp.firstoutofS !== nothing && (fp.firstoutofS.prevoutofS = nothing)
                     else # ij is not the first element of the list
-                        ji.prevoutofS.nextoutofS = ji.nextoutofS
+                        ji.prevoutofS.nextoutofS = ji.nextoutofS # Slow
                     end 
                 else # ji leads in to S
                     # Add ji to the intoS linked list
                     if fp.firstintoS === nothing # ji is the only element
                         ji.nextintoS = nothing
                     else # ji goes to the beginning of an existing list
-                        fp.firstintoS.prevoutofS = ji
-                        ji.nextintoS = fp.firstintoS
+                        fp.firstintoS.previntoS = ji
+                        ji.nextintoS = fp.firstintoS # Slow
                     end
                     ji.previntoS = nothing
                     fp.firstintoS = ji
                 end
+                #showSinout(fp)
                 ji = ji.nextto
             end
 
@@ -182,6 +186,7 @@ dual objective function if prices were updated
 """
 function dualascendable(fp::FlowProblem)
 
+    # TODO: Can calculate this incrementally after adding new S
     #println("Calculating ascent gradient...")
     x = 0
 
@@ -335,7 +340,7 @@ function updateprices!(fp::FlowProblem)
     while ij !== nothing
       if ij.reducedcost === 0
           ij.flow = ij.limit # Adjust flow
-      elseif ij.flow < ij.limit
+      elseif ij.flow < ij.limit # Implies inactive, check for that explicitly instead?
           gamma = min(gamma, ij.reducedcost)
       end
       ij = ij.nextoutofS
@@ -345,7 +350,7 @@ function updateprices!(fp::FlowProblem)
     while ij !== nothing
         if ij.reducedcost === 0
             ij.flow = 0
-        elseif ij.flow > 0
+        elseif ij.flow > 0 # Implies active, check for that?
             gamma = min(gamma, -ij.reducedcost)
         end
       ij = ij.nextintoS
@@ -360,6 +365,9 @@ function updateprices!(fp::FlowProblem)
 
             # Price is increase by gamma
             i.price += gamma
+
+            # TODO: Can just replace this with first/next into/outof S lists,
+            # the intra-S edges have their changes cancelled out anyways
 
             # Edges from i have reduced cost decreased by gamma
             ij = i.firstfrom
