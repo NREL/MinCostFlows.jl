@@ -8,7 +8,11 @@ function solveflows!(fp::FlowProblem)
 
     recalculateimbalances!(fp)
 
+    majoriters = 0
+    minoriters = 0
     while true
+
+        majoriters += 1
 
         #println(elist)
         #println("Costs: ", costs(fp))
@@ -23,7 +27,7 @@ function solveflows!(fp::FlowProblem)
         augmentingpathstart = firstpositiveimbalance(fp)
 
         # No starting node found, problem is either solved or infeasible
-        augmentingpathstart === nothing && return fp
+        augmentingpathstart === nothing && break
 
         # Reset the scan sets for this iteration
         resetSL!(fp, augmentingpathstart)
@@ -31,16 +35,23 @@ function solveflows!(fp::FlowProblem)
         #showSinout(fp)
 
         # Main iteration: update either flows or shadow prices
-        update!(fp, augmentingpathstart)
+        minoriters += update!(fp, augmentingpathstart)
 
     end
+
+    println(majoriters, " major iterations")
+    println(minoriters, " minor iterations")
+    println("Average ", minoriters / majoriters, " minor iterations per major iteration")
+    return fp
 
 end
 
 function update!(fp::FlowProblem, augmentingpathstart::Node)
 
+    iters = 0
     while true
 
+        iters += 1
         #println("Starting minor iteration")
 
         # Look for a candidate node i to scan and add to S
@@ -50,7 +61,10 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
 
         # Update prices if it will improve the dual solution
         # or if there are no nodes left to scan
-        (i === nothing || dualascendable(fp)) && return updateprices!(fp)
+        if i === nothing || dualascendable(fp)
+            updateprices!(fp)
+            break
+        end
 
         # Label neighbour nodes of i
         augmentingpathend = augmentL!(fp, i)
@@ -60,9 +74,12 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
         augmentingpathend === nothing && continue
 
         # Found an augmenting path, augment flows accordingly
-        return updateflows!(fp, augmentingpathstart, augmentingpathend)
+        updateflows!(fp, augmentingpathstart, augmentingpathend)
+        break
 
     end
+
+    return iters
 
 end
 
@@ -126,7 +143,7 @@ function augmentS!(fp::FlowProblem)
                         fp.firstintoS = ij.nextintoS
                         fp.firstintoS !== nothing && (fp.firstintoS.previntoS = nothing)
                     else # ij is not the first element of the list
-                        ij.previntoS.nextintoS = ij.nextintoS # Slow
+                        ij.previntoS.nextintoS = ij.nextintoS # Slow / frequent
                     end
                 else # ij leads out of S
                     # Add ij to the outofS linked list
@@ -134,7 +151,7 @@ function augmentS!(fp::FlowProblem)
                         ij.nextoutofS = nothing
                     else # ij goes to the beginning of an existing list
                         fp.firstoutofS.prevoutofS = ij
-                        ij.nextoutofS = fp.firstoutofS # Slow
+                        ij.nextoutofS = fp.firstoutofS # Slow / frequent
                     end
                     ij.prevoutofS = nothing
                     fp.firstoutofS = ij
@@ -151,7 +168,7 @@ function augmentS!(fp::FlowProblem)
                         fp.firstoutofS = ji.nextoutofS
                         fp.firstoutofS !== nothing && (fp.firstoutofS.prevoutofS = nothing)
                     else # ij is not the first element of the list
-                        ji.prevoutofS.nextoutofS = ji.nextoutofS # Slow
+                        ji.prevoutofS.nextoutofS = ji.nextoutofS # Slow / frequent
                     end 
                 else # ji leads in to S
                     # Add ji to the intoS linked list
@@ -159,7 +176,7 @@ function augmentS!(fp::FlowProblem)
                         ji.nextintoS = nothing
                     else # ji goes to the beginning of an existing list
                         fp.firstintoS.previntoS = ji
-                        ji.nextintoS = fp.firstintoS # Slow
+                        ji.nextintoS = fp.firstintoS # Slow / frequent
                     end
                     ji.previntoS = nothing
                     fp.firstintoS = ji
@@ -290,14 +307,11 @@ Updates the flows on the augmenting path from `startnode` to `endnode`
 function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
 
     #println("Updating flows...")
-    currentnode = endnode
     delta = min(startnode.imbalance, -endnode.imbalance)
-    for edge in fp.edges # TODO: Eliminate with linked list?
-        edge.forward = false
-        edge.backward = false
-    end
 
+    # First pass, determine value of delta
     # Traverse the labels backwards to startnode
+    currentnode = endnode
     while currentnode !== startnode
 
         # Determine edge direction and move to previous node
@@ -306,22 +320,39 @@ function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
         b = ab.nodeto
 
         if b === currentnode # ab is a forward edge in the path, move to node a
-            ab.forward = true
-            currentnode = a
             delta = min(delta, ab.limit - ab.flow)
+            currentnode = a
         else # ab is a backwards edge in the path, move to node b
-            ab.backward = true
-            currentnode = b
             delta = min(delta, ab.flow)
+            currentnode = b
         end
 
     end
 
+    # Second pass, adjust flows by delta
     # Adjust edge flows as appropriate
-    for edge in fp.edges # TODO: Switch to linked list
-        edge.forward && (edge.flow += delta)
-        edge.backward && (edge.flow -= delta)
+    currentnode = endnode
+    while currentnode !== startnode
+
+        # Determine edge direction and move to previous node
+        ab = currentnode.label # Get edge
+        a = ab.nodefrom # Get edge to/from nodes
+        b = ab.nodeto
+
+        if b === currentnode # ab is a forward edge, move to node a
+            ab.flow += delta
+            currentnode = a
+        else # ab is a backward edge, move to node b
+            ab.flow -= delta
+            currentnode = b
+        end
+
     end
+
+    #for edge in fp.edges # TODO: Switch to linked list
+    #    edge.augpathforward && (edge.flow += delta)
+    #    edge.backward && (edge.flow -= delta)
+    #end
 
     recalculateimbalances!(fp) #TODO: Do this on the fly instead
 

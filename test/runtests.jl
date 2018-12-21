@@ -143,13 +143,13 @@ include("utils.jl")
 
     end
 
-    if false
+    if true
 
         Random.seed!(1234)
         @profile zeros(1)
         Profile.clear()
-        println("n = 200, e = 400")
-        N = 20; E = 40
+        N = 40; E = 100
+        println("n = $N, e = $E")
         fp = randomproblem(N, E)
         @profile solveflows!(fp)
 

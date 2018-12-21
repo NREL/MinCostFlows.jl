@@ -13,12 +13,10 @@ mutable struct Edge{T<:AbstractNode}
     cost::Int
     reducedcost::Int
     flow::Int
-    forward::Bool
-    backward::Bool # TODO: Switch to linked list and eliminate
 
     Edge{}(from::T, to::T, limit::Int, cost::Int) where {T <: AbstractNode} =
         new{T}(from, to, nothing, nothing,
-               nothing, nothing, nothing, nothing, limit, cost, cost, 0, false, false)
+               nothing, nothing, nothing, nothing, limit, cost, cost, 0)
 end
 
 mutable struct Node <: AbstractNode
