@@ -15,13 +15,13 @@ function solveflows!(fp::FlowProblem)
 
         majoriters += 1
 
-        #println(elist)
+        #println(edgelist(fp))
         #println("Costs: ", costs(fp))
         #println("Limits: ", limits(fp))
         #println("Flows: ", flows(fp))
         #println("Injections: ", injections(fp))
         #println("Prices: ", prices(fp))
-        @assert complementarityslackness(fp)
+        #@assert complementarityslackness(fp)
         println("Starting major iteration")
 
         # Find a potential starting node for an augmenting path
@@ -32,8 +32,7 @@ function solveflows!(fp::FlowProblem)
 
         # Reset the scan sets for this iteration
         resetSL!(fp, augmentingpathstart)
-        #showSL(fp)
-        #showSinout(fp)
+        showSL(fp)
 
         # Main iteration: update either flows or shadow prices
         minoriters += update!(fp, augmentingpathstart)
@@ -62,8 +61,7 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
 
         # Look for a candidate node i to scan and add to S
         i = augmentS!(fp)
-        #showSL(fp)
-        #showSinout(fp)
+        showSL(fp)
 
         # Update prices if it will improve the dual solution
         # or if there are no nodes left to scan
@@ -74,7 +72,7 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
 
         # Label neighbour nodes of i
         augmentingpathend = augmentL!(fp, i)
-        #showSL(fp)
+        showSL(fp)
 
         # Didn't find an augmenting path, try adding a different node
         augmentingpathend === nothing && continue
@@ -274,7 +272,6 @@ function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
     end
 
     # Second pass, adjust flows by delta
-    # Adjust edge flows as appropriate
     currentnode = endnode
     while currentnode !== startnode
 
@@ -302,6 +299,14 @@ Updates the shadow prices (and potentially flows) of the elements of S
 (Step 4 in Bertsekas)
 """
 function updateprices!(fp::FlowProblem)
+
+    function printedge(edge::Edge)
+        a = nodeidx(fp, edge.nodefrom)
+        b = nodeidx(fp, edge.nodeto)
+        rc = edge.reducedcost
+        fl = edge.flow
+        return "$a=>$b(rc=$rc, flow=$fl)"
+    end
 
     println("Updating prices...")
     gamma = typemax(Int)
@@ -344,6 +349,40 @@ function updateprices!(fp::FlowProblem)
 
     end
 
+    if gamma === typemax(Int)
+
+        i = fp.firstL
+        while i !== nothing
+            if i.inS
+
+                i_idx = nodeidx(fp, i)
+
+                println("Edges to $(i_idx):")
+                printlist(i, :firstto, :nextto, printedge)
+                print("Active: ")
+                printlist(i, :firstactiveto, :nextactiveto, printedge)
+                print("Balanced: ")
+                printlist(i, :firstbalancedto, :nextbalancedto, printedge)
+                print("Inactive: ")
+                printlist(i, :firstinactiveto, :nextinactiveto, printedge)
+
+                println("Edges from $(i_idx):")
+                printlist(i, :firstfrom, :nextfrom, printedge)
+                print("Active: ")
+                printlist(i, :firstactivefrom, :nextactivefrom, printedge)
+                print("Balanced: ")
+                printlist(i, :firstbalancedfrom, :nextbalancedfrom, printedge)
+                print("Inactive: ")
+                printlist(i, :firstinactivefrom, :nextinactivefrom, printedge)
+
+            end
+            i = i.nextL
+        end
+
+        error("gamma === typemax(Int)")
+
+    end
+
     # Flows have changed, so recalculate imbalances
     # TODO: Do this more intelligently on the fly
     calculateimbalances!(fp)
@@ -369,8 +408,9 @@ function updateprices!(fp::FlowProblem)
 
                     oldreducedcost = ij.reducedcost 
                     newreducedcost = oldreducedcost - gamma
+                    ij.reducedcost = newreducedcost
 
-                    if oldreducedcost === 0 # ij moves balanced -> active
+                    if oldreducedcost === 0 # ij moved from balanced -> active
 
                         # Remove edge from i's balancedfrom adjacency list
                         remove!(ij, :prevbalancedfrom, :nextbalancedfrom,
@@ -388,7 +428,7 @@ function updateprices!(fp::FlowProblem)
                         addend!(ij, :prevactiveto, :nextactiveto,
                                 j, :firstactiveto, :lastactiveto)
 
-                    elseif newreducedcost === 0 # ij moves inactive -> balanced
+                    elseif newreducedcost === 0 # ij moved from inactive -> balanced
 
                         # Remove edge from i's inactivefrom adjacency list
                         remove!(ij, :previnactivefrom, :nextinactivefrom,
@@ -408,8 +448,6 @@ function updateprices!(fp::FlowProblem)
 
                     end
 
-                    ij.reducedcost = newreducedcost
-
                 end
 
                 ij = ij.nextfrom
@@ -426,8 +464,9 @@ function updateprices!(fp::FlowProblem)
 
                     oldreducedcost = ji.reducedcost
                     newreducedcost = oldreducedcost + gamma
+                    ji.reducedcost = newreducedcost
 
-                    if oldreducedcost === 0 # ji moves from balanced -> inactive
+                    if oldreducedcost === 0 # ji moved from balanced -> inactive
 
                         # Remove edge from j's balancedfrom adjacency list
                         remove!(ji, :prevbalancedfrom, :nextbalancedfrom,
@@ -445,7 +484,7 @@ function updateprices!(fp::FlowProblem)
                         addend!(ji, :previnactiveto, :nextinactiveto,
                                 i, :firstinactiveto, :lastinactiveto)
 
-                    elseif newreducedcost === 0 # ji moves from active -> balanced
+                    elseif newreducedcost === 0 # ji moved from active -> balanced
 
                         # Remove edge from j's activefrom adjacency list
                         remove!(ji, :prevactivefrom, :nextactivefrom,
@@ -464,8 +503,6 @@ function updateprices!(fp::FlowProblem)
                                 i, :firstbalancedto, :lastbalancedto)
 
                     end
-
-                    ji.reducedcost = newreducedcost
 
                 end
 

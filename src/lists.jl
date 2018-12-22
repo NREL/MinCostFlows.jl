@@ -105,3 +105,13 @@ function remove!(elem, prev::Symbol, next::Symbol, context, first::Symbol, last:
     return
 
 end
+
+function printlist(ctx, first::Symbol, next::Symbol, f::Function)
+    l = getproperty(ctx, first)
+    print("[")
+    while l !== nothing
+        print(f(l), ", ")
+        l = getproperty(l, next)
+    end
+    println("]")
+end

@@ -113,21 +113,21 @@ function complementarityslackness(fp::FlowProblem)
         if (edge.reducedcost < 0) && (edge.flow != edge.limit)
             i = findfirst(n -> n === edge.nodefrom, fp.nodes)
             j = findfirst(n -> n === edge.nodeto, fp.nodes)
-            println("Active arc violation on edge $i => $j")
+            println("Active arc violation on edge $i => $j, reduced cost = $(edge.reducedcost)")
             satisfied = false
 
         # Check condition for balanced arcs
         elseif (edge.reducedcost == 0) && (edge.flow < 0 || edge.flow > edge.limit)
             i = findfirst(n -> n === edge.nodefrom, fp.nodes)
             j = findfirst(n -> n === edge.nodeto, fp.nodes)
-            println("Balanced arc violation on edge $i => $j")
+            println("Balanced arc violation on edge $i => $j, reduced cost = $(edge.reducedcost)")
             satisfied = false
 
         # Check condition for inactive arcs
         elseif (edge.reducedcost > 0) && (edge.flow != 0)
             i = findfirst(n -> n === edge.nodefrom, fp.nodes)
             j = findfirst(n -> n === edge.nodeto, fp.nodes)
-            println("Inactive arc violation on edge $i => $j")
+            println("Inactive arc violation on edge $i => $j, reduced cost = $(edge.reducedcost)")
             satisfied = false
 
         end
@@ -138,23 +138,3 @@ function complementarityslackness(fp::FlowProblem)
 
 end
 
-# e.g. @remove!(ij, prevbalancedto, nextbalancedto, i, firstbalancedto, lastbalancedto)
-macro remove!(elem, prev, next, context, first, last)
-
-    quote
-
-        if $elem.$prev === nothing # elem is at start of list
-            $context.$first = $elem.$next
-        else
-            $elem.$prev.$next = $elem.next
-        end
-
-        if $elem.$next === nothing
-            $context.$last = $elem.$prev
-        else
-            $elem.$next.$prev = $elem.$prev
-        end
-
-    end
-
-end
