@@ -137,3 +137,24 @@ function complementarityslackness(fp::FlowProblem)
     return satisfied
 
 end
+
+# e.g. @remove!(ij, prevbalancedto, nextbalancedto, i, firstbalancedto, lastbalancedto)
+macro remove!(elem, prev, next, context, first, last)
+
+    quote
+
+        if $elem.$prev === nothing # elem is at start of list
+            $context.$first = $elem.$next
+        else
+            $elem.$prev.$next = $elem.next
+        end
+
+        if $elem.$next === nothing
+            $context.$last = $elem.$prev
+        else
+            $elem.$next.$prev = $elem.$prev
+        end
+
+    end
+
+end

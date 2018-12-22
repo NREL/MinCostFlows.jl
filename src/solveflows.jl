@@ -4,9 +4,10 @@ min-cost flow problems, as described in Bertsekas (1998)
 """
 function solveflows!(fp::FlowProblem)
 
-    elist = edgelist(fp)
+    #elist = edgelist(fp)
+    starttime = time()
 
-    recalculateimbalances!(fp)
+    calculateimbalances!(fp)
 
     majoriters = 0
     minoriters = 0
@@ -20,8 +21,8 @@ function solveflows!(fp::FlowProblem)
         #println("Flows: ", flows(fp))
         #println("Injections: ", injections(fp))
         #println("Prices: ", prices(fp))
-        #@assert complementarityslackness(fp)
-        #println("Starting major iteration")
+        @assert complementarityslackness(fp)
+        println("Starting major iteration")
 
         # Find a potential starting node for an augmenting path
         augmentingpathstart = firstpositiveimbalance(fp)
@@ -39,9 +40,14 @@ function solveflows!(fp::FlowProblem)
 
     end
 
+    endtime = time()
+    elapsedtime = endtime - starttime
     println(majoriters, " major iterations")
     println(minoriters, " minor iterations")
-    println("Average ", minoriters / majoriters, " minor iterations per major iteration")
+    println("Average ", minoriters/majoriters, " minor iterations per major iteration")
+    println("Solved in ", elapsedtime, "s")
+    println("Average ", elapsedtime/majoriters, "s per major iteration")
+    println("Average ", elapsedtime/minoriters, "s per minor iteration")
     return fp
 
 end
@@ -52,7 +58,7 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
     while true
 
         iters += 1
-        #println("Starting minor iteration")
+        println("Starting minor iteration")
 
         # Look for a candidate node i to scan and add to S
         i = augmentS!(fp)
@@ -99,17 +105,13 @@ Empties the set S and reduces the set L to a single element, `j`
 """
 function resetSL!(fp::FlowProblem, j::Node)
 
-    #println("Resetting SL...")
+    println("Resetting SL...")
     node = fp.firstL
     while node !== nothing
         node.inL = false
         node.inS = false
         node = node.nextL
     end
-
-    # Reset into/outof edge lists
-    fp.firstintoS = nothing
-    fp.firstoutofS = nothing
 
     # Reset L to {j}
     fp.firstL = j
@@ -126,7 +128,7 @@ to S. If S == L, return `nothing` and make no changes.
 """
 function augmentS!(fp::FlowProblem)
 
-    #println("Augmenting S...")
+    println("Augmenting S...")
     i = fp.firstL
     while i !== nothing
 
@@ -135,54 +137,24 @@ function augmentS!(fp::FlowProblem)
             # i joins S
             i.inS = true
 
-            ij = i.firstfrom
+            ij = i.firstbalancedfrom
             while ij !== nothing
-                if ij.nodeto.inS # i and j are both in S now
-                    # Extract ij from the intoS linked list
-                    if ij.previntoS === nothing # ij is the first element of the list
-                        fp.firstintoS = ij.nextintoS
-                        fp.firstintoS !== nothing && (fp.firstintoS.previntoS = nothing)
-                    else # ij is not the first element of the list
-                        ij.previntoS.nextintoS = ij.nextintoS # Slow / frequent
-                    end
-                else # ij leads out of S
-                    # Add ij to the outofS linked list
-                    if fp.firstoutofS === nothing # ij is the only element
-                        ij.nextoutofS = nothing
-                    else # ij goes to the beginning of an existing list
-                        fp.firstoutofS.prevoutofS = ij
-                        ij.nextoutofS = fp.firstoutofS # Slow / frequent
-                    end
-                    ij.prevoutofS = nothing
-                    fp.firstoutofS = ij
+                if ij.nodeto.inS
+                    fp.ascentgradient += ij.flow
+                else
+                    fp.ascentgradient -= (ij.limit - ij.flow)
                 end
-                #showSinout(fp)
-                ij = ij.nextfrom
+                ij = ij.nextbalancedfrom
             end
 
-            ji = i.firstto
+            ji = i.firstbalancedto
             while ji !== nothing
-                if ji.nodefrom.inS # j and i are both in S now
-                    # Extract ji from the outofS linked list
-                    if ji.prevoutofS === nothing # ji is the first element of the list
-                        fp.firstoutofS = ji.nextoutofS
-                        fp.firstoutofS !== nothing && (fp.firstoutofS.prevoutofS = nothing)
-                    else # ij is not the first element of the list
-                        ji.prevoutofS.nextoutofS = ji.nextoutofS # Slow / frequent
-                    end 
-                else # ji leads in to S
-                    # Add ji to the intoS linked list
-                    if fp.firstintoS === nothing # ji is the only element
-                        ji.nextintoS = nothing
-                    else # ji goes to the beginning of an existing list
-                        fp.firstintoS.previntoS = ji
-                        ji.nextintoS = fp.firstintoS # Slow / frequent
-                    end
-                    ji.previntoS = nothing
-                    fp.firstintoS = ji
+                if ji.nodefrom.inS
+                    fp.ascentgradient += (ji.limit - ji.flow)
+                else
+                    fp.ascentgradient -= ji.flow
                 end
-                #showSinout(fp)
-                ji = ji.nextto
+                ji = ji.nextbalancedfrom
             end
 
             return i
@@ -203,32 +175,8 @@ dual objective function if prices were updated
 """
 function dualascendable(fp::FlowProblem)
 
-    # TODO: Can calculate this incrementally after adding new S
-    #println("Calculating ascent gradient...")
-    x = 0
-
-    node = fp.firstL
-    while node !== nothing
-        node.inS && (x += node.injection) #TODO: Fix S ordering in L list to avoid this
-        node = node.nextL
-    end
-
-    ij = fp.firstintoS
-    while ij !== nothing
-        # ij leads in to S and is active
-        (ij.reducedcost < 0) && (x += ij.limit)
-        ij = ij.nextintoS
-    end
-
-    ij = fp.firstoutofS
-    while ij !== nothing
-        # ij leads out of S and is balanced or active
-        (ij.reducedcost <= 0) && (x -= ij.limit)
-        ij = ij.nextoutofS
-    end
-
-    #println("Gradient: ", x)
-    return x > 0
+    println("Gradient: ", fp.ascentgradient)
+    return fp.ascentgradient > 0
 
 end
 
@@ -239,64 +187,60 @@ returning one such added node that has a positive imbalance
 """
 function augmentL!(fp::FlowProblem, i::N)::Union{N,Nothing} where {N<:Node}
 
-    #println("Augmenting L...")
-    negativeimbalance = nothing
+    println("Augmenting L...")
+    negativeimbalancenode = nothing
 
-    # Iterate through edges ji connecting j to i
-    ji = i.firstto
+    # Iterate through balanced edges ji connecting j to i
+    ji = i.firstbalancedto
     while ji !== nothing
 
         j = ji.nodefrom # source node of edge ji
 
-        if (!j.inL && # j isn't already in L #TODO: Linked list again?
-            ji.reducedcost === 0 && # ji is balanced
-            ji.flow > 0) # flow exceeds lower bound
+        if (!j.inL && ji.flow > 0) # flow enters L and exceeds lower bound
 
             # Add j to L
             j.inL = true
             j.nextL = fp.firstL
             fp.firstL = j
 
-            # Define label for j
-            j.label = ji
+            # Save path back to i
+            j.augpathprev = ji
 
             # Check for negative imbalance and save for returning
-            j.imbalance < 0 && (negativeimbalance = j)
+            j.imbalance < 0 && (negativeimbalancenode = j)
 
         end
 
-        ji = ji.nextto # Get next edge
+        ji = ji.nextbalancedto # Get next edge
 
     end
 
-    # Iterate through edges ij connecting i to j
-    ij = i.firstfrom
+    # Iterate through balanced edges ij connecting i to j
+    ij = i.firstbalancedfrom
     while ij !== nothing
 
         j = ij.nodeto # sink node of edge ij
 
-        if (!j.inL && # j isn't already in L
-            ij.reducedcost === 0 && # ij is balanced
-            (ij.flow < ij.limit)) # ij flow is less than limit
+        if (!j.inL && ij.flow < ij.limit) # flow leaves L and is less than limit
 
             # Add j to L
             j.inL = true
             j.nextL = fp.firstL
             fp.firstL = j
 
-            # Define label for j
-            j.label = ij
+            # Save path back to i
+            j.augpathprev = ij
 
             # Check for negative imbalance and save for returning
-            j.imbalance < 0 && (negativeimbalance = j)
+            j.imbalance < 0 && (negativeimbalancenode = j)
 
         end
 
-        ij = ij.nextfrom # Get next edge
+        ij = ij.nextbalancedfrom # Get next edge
 
     end
 
-    return negativeimbalance
+    return negativeimbalancenode
 
 end
 
@@ -306,16 +250,16 @@ Updates the flows on the augmenting path from `startnode` to `endnode`
 """
 function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
 
-    #println("Updating flows...")
+    println("Updating flows...")
     delta = min(startnode.imbalance, -endnode.imbalance)
 
     # First pass, determine value of delta
-    # Traverse the labels backwards to startnode
+    # Traverse the augmenting path backwards to startnode
     currentnode = endnode
     while currentnode !== startnode
 
         # Determine edge direction and move to previous node
-        ab = currentnode.label # Get edge
+        ab = currentnode.augpathprev # Get edge
         a = ab.nodefrom # Get edge to/from nodes
         b = ab.nodeto
 
@@ -335,7 +279,7 @@ function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
     while currentnode !== startnode
 
         # Determine edge direction and move to previous node
-        ab = currentnode.label # Get edge
+        ab = currentnode.augpathprev # Get edge
         a = ab.nodefrom # Get edge to/from nodes
         b = ab.nodeto
 
@@ -349,12 +293,7 @@ function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
 
     end
 
-    #for edge in fp.edges # TODO: Switch to linked list
-    #    edge.augpathforward && (edge.flow += delta)
-    #    edge.backward && (edge.flow -= delta)
-    #end
-
-    recalculateimbalances!(fp) #TODO: Do this on the fly instead
+    calculateimbalances!(fp) #TODO: Do this on the fly instead
 
 end
 
@@ -364,30 +303,53 @@ Updates the shadow prices (and potentially flows) of the elements of S
 """
 function updateprices!(fp::FlowProblem)
 
-    #println("Updating prices...")
+    println("Updating prices...")
     gamma = typemax(Int)
 
-    ij = fp.firstoutofS
-    while ij !== nothing
-      if ij.reducedcost === 0
-          ij.flow = ij.limit # Adjust flow
-      elseif ij.flow < ij.limit # Implies inactive, check for that explicitly instead?
-          gamma = min(gamma, ij.reducedcost)
-      end
-      ij = ij.nextoutofS
+    # TODO: Search with S or notS, based on set sizes (or count of edges in set?)
+    i = fp.firstL
+    while i !== nothing
+
+        if i.inS
+
+            # Adjust flows on balanced lines in to / out of S
+            ij = i.firstbalancedfrom
+            while ij !== nothing
+                !ij.nodeto.inS && (ij.flow = ij.limit)
+                ij = ij.nextbalancedfrom
+            end
+
+            ji = i.firstbalancedto
+            while ji !== nothing
+                !ji.nodefrom.inS && (ji.flow = 0)
+                ji = ji.nextbalancedto
+            end
+
+            # Determine gamma from active / inactive lines in to / out of S
+            ij = i.firstinactivefrom
+            while ij !== nothing
+                !ij.nodeto.inS && (gamma = min(gamma, ij.reducedcost))
+                ij = ij.nextinactivefrom
+            end
+
+            ji = i.firstactiveto
+            while ji !== nothing
+                !ji.nodefrom.inS && (gamma = min(gamma, -ji.reducedcost))
+                ji = ji.nextactiveto
+            end
+
+        end
+
+        i = i.nextL
+
     end
 
-    ij = fp.firstintoS
-    while ij !== nothing
-        if ij.reducedcost === 0
-            ij.flow = 0
-        elseif ij.flow > 0 # Implies active, check for that?
-            gamma = min(gamma, -ij.reducedcost)
-        end
-      ij = ij.nextintoS
-    end
+    # Flows have changed, so recalculate imbalances
+    # TODO: Do this more intelligently on the fly
+    calculateimbalances!(fp)
 
     # Adjust node prices and edge reduced costs
+    # TODO: Use S
     i = fp.firstL
     while i !== nothing
 
@@ -397,21 +359,118 @@ function updateprices!(fp::FlowProblem)
             # Price is increase by gamma
             i.price += gamma
 
-            # TODO: Can just replace this with first/next into/outof S lists,
-            # the intra-S edges have their changes cancelled out anyways
-
             # Edges from i have reduced cost decreased by gamma
             ij = i.firstfrom
             while ij !== nothing
-                ij.reducedcost -= gamma
+
+                j = ij.nodeto
+
+                if !j.inS # S->S edges don't change
+
+                    oldreducedcost = ij.reducedcost 
+                    newreducedcost = oldreducedcost - gamma
+
+                    if oldreducedcost === 0 # ij moves balanced -> active
+
+                        # Remove edge from i's balancedfrom adjacency list
+                        remove!(ij, :prevbalancedfrom, :nextbalancedfrom,
+                                i, :firstbalancedfrom, :lastbalancedfrom)
+
+                        # Remove edge from j's balancedto adjacency list
+                        remove!(ij, :prevbalancedto, :nextbalancedto,
+                                j, :firstbalancedto, :lastbalancedto)
+
+                        # Add edge to i's activefrom adjacency list
+                        addend!(ij, :prevactivefrom, :nextactivefrom,
+                                i, :firstactivefrom, :lastactivefrom)
+
+                        # Add edge to j's activeto adjacency list
+                        addend!(ij, :prevactiveto, :nextactiveto,
+                                j, :firstactiveto, :lastactiveto)
+
+                    elseif newreducedcost === 0 # ij moves inactive -> balanced
+
+                        # Remove edge from i's inactivefrom adjacency list
+                        remove!(ij, :previnactivefrom, :nextinactivefrom,
+                                i, :firstinactivefrom, :lastinactivefrom)
+
+                        # Remove edge from j's inactiveto adjacency list
+                        remove!(ij, :previnactiveto, :nextinactiveto,
+                                j, :firstinactiveto, :lastinactiveto)
+
+                        # Add edge to i's balancedfrom adjacency list
+                        addend!(ij, :prevbalancedfrom, :nextbalancedfrom,
+                                i, :firstbalancedfrom, :lastbalancedfrom)
+
+                        # Add edge to j's balancedto adjacency list
+                        addend!(ij, :prevbalancedto, :nextbalancedto,
+                                j, :firstbalancedto, :lastbalancedto)
+
+                    end
+
+                    ij.reducedcost = newreducedcost
+
+                end
+
                 ij = ij.nextfrom
+
             end
 
             # Edges to i have reduced cost increased by gamma
             ji = i.firstto
             while ji !== nothing
-                ji.reducedcost += gamma
+
+                j = ji.nodefrom
+
+                if !j.inS # S->S edges don't change
+
+                    oldreducedcost = ji.reducedcost
+                    newreducedcost = oldreducedcost + gamma
+
+                    if oldreducedcost === 0 # ji moves from balanced -> inactive
+
+                        # Remove edge from j's balancedfrom adjacency list
+                        remove!(ji, :prevbalancedfrom, :nextbalancedfrom,
+                                j, :firstbalancedfrom, :lastbalancedfrom)
+
+                        # Remove edge from i's balancedto adjacency list
+                        remove!(ji, :prevbalancedto, :nextbalancedto,
+                                i, :firstbalancedto, :lastbalancedto)
+
+                        # Add edge to j's inactivefrom adjacency list
+                        addend!(ji, :previnactivefrom, :nextinactivefrom,
+                                j, :firstinactivefrom, :lastinactivefrom)
+
+                        # Add edge to i's inactiveto adjacency list
+                        addend!(ji, :previnactiveto, :nextinactiveto,
+                                i, :firstinactiveto, :lastinactiveto)
+
+                    elseif newreducedcost === 0 # ji moves from active -> balanced
+
+                        # Remove edge from j's activefrom adjacency list
+                        remove!(ji, :prevactivefrom, :nextactivefrom,
+                                j, :firstactivefrom, :lastactivefrom)
+
+                        # Remove edge from i's activeto adjacency list
+                        remove!(ji, :prevactiveto, :nextactiveto,
+                                i, :firstactiveto, :lastactiveto)
+
+                        # Add edge to j's balancedfrom adjacency list
+                        addend!(ji, :prevbalancedfrom, :nextbalancedfrom,
+                                j, :firstbalancedfrom, :lastbalancedfrom)
+
+                        # Add edge to i's balancedto adjacency list
+                        addend!(ji, :prevbalancedto, :nextbalancedto,
+                                i, :firstbalancedto, :lastbalancedto)
+
+                    end
+
+                    ji.reducedcost = newreducedcost
+
+                end
+
                 ji = ji.nextto
+
             end
 
         end
@@ -420,12 +479,14 @@ function updateprices!(fp::FlowProblem)
 
     end
 
-    recalculateimbalances!(fp)
+    # Prices have changed, so recalculate ascent gradient
+    # TODO: Do this more intelligently on the fly
+    calculateascentgradient!(fp)
 
 end
 
 # TODO: Should probably recalculate these on the fly instead (whenever flow is updated)
-function recalculateimbalances!(fp::FlowProblem)
+function calculateimbalances!(fp::FlowProblem)
 
     for node in fp.nodes
         node.imbalance = node.injection
@@ -434,6 +495,43 @@ function recalculateimbalances!(fp::FlowProblem)
     for edge in fp.edges
         edge.nodefrom.imbalance -= edge.flow
         edge.nodeto.imbalance += edge.flow
+    end
+
+end
+
+# #TODO: Should do this on the fly / with iterative updates instead
+function calculateascentgradient!(fp::FlowProblem)
+
+    # TODO: Use S instead
+    i = fp.firstL
+    while i !== nothing
+
+        if i.inS
+
+            ij = i.firstbalancedfrom
+            while ij !== nothing
+                !ij.nodeto.inS && (fp.ascentgradient -= ij.limit)
+                ij = ij.nextbalancedfrom
+            end
+
+            ij = i.firstactivefrom
+            while ij !== nothing
+                !ij.nodeto.inS && (fp.ascentgradient -= ij.limit)
+                ij = ij.nextactivefrom
+            end
+
+            ji = i.firstactiveto
+            while ji !== nothing
+                !ji.nodefrom.inS && (fp.ascentgradient += ji.limit)
+                ji = ji.nextactiveto
+            end
+
+            fp.ascentgradient += i.injection
+
+        end
+
+        i = i.nextL
+
     end
 
 end

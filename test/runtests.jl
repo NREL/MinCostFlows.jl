@@ -8,10 +8,11 @@ using Profile
 using Random
 
 include("utils.jl")
+include("listutils.jl")
 
 @testset "MinCostFlow" begin
 
-
+    include("lists.jl")
 
     @testset "Example networks" begin
 

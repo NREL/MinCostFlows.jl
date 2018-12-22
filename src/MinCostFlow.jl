@@ -11,6 +11,7 @@ export
 include("FlowProblem.jl")
 include("solveflows.jl")
 include("update.jl")
+include("lists.jl")
 include("utils.jl")
 
 end
