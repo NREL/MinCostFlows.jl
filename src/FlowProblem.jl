@@ -29,8 +29,8 @@ mutable struct Edge{T<:AbstractNode}
                nothing, nothing, nothing, nothing, limit, cost, cost, 0)
 end
 
-# TODO: Probably don't need the last to/from references for solving,
-#       removing them might provide a small speedup?
+# TODO: These likely don't all need to be doubly-linked lists,
+#       simplifying some might provide a small speedup?
 #       (would need a workaround during initialization though)
 mutable struct Node <: AbstractNode
     firstfrom::Union{Edge{Node},Nothing}
@@ -48,7 +48,10 @@ mutable struct Node <: AbstractNode
     firstactiveto::Union{Edge{Node},Nothing}
     lastactiveto::Union{Edge{Node},Nothing}
     augpathprev::Union{Edge{Node},Nothing}
-    nextL::Union{Node,Nothing} #TODO: Switch over to S, L-S, notS lists
+    nextS::Union{Node,Nothing}
+    prevS::Union{Node,Nothing}
+    nextLnotS::Union{Node,Nothing}
+    prevLnotS::Union{Node,Nothing}
     injection::Int
     price::Int
     imbalance::Int
@@ -59,13 +62,17 @@ mutable struct Node <: AbstractNode
                                nothing, nothing, nothing, nothing,
                                nothing, nothing, nothing, nothing,
                                nothing, nothing, nothing, nothing,
+                               nothing, nothing, nothing,
                                injection, 0, injection, false, false)
 end
 
 mutable struct FlowProblem
     nodes::Vector{Node}
     edges::Vector{Edge{Node}}
-    firstL::Union{Node,Nothing}
+    firstS::Union{Node,Nothing}
+    lastS::Union{Node,Nothing}
+    firstLnotS::Union{Node,Nothing}
+    lastLnotS::Union{Node,Nothing}
     ascentgradient::Int
 end
 
@@ -120,7 +127,7 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
 
     end
 
-    return FlowProblem(nodes, edges, nothing, 0)
+    return FlowProblem(nodes, edges, nothing, nothing, nothing, nothing, 0)
 
 end
 
