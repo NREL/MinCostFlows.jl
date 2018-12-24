@@ -14,18 +14,17 @@ include("listutils.jl")
 
     include("lists.jl")
 
-    if false
     @testset "Example networks" begin
 
         @testset "Bertsekas page 220" begin
 
             fp = FlowProblem([1,2], [2,3], [5,5], [0,1], [1,0,-1])
-            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
             lp = linprog(fp)
             solveflows!(fp)
 
-            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
             @test flows(fp) == [1,1]
             @test prices(fp) == [1,1,0]
             @test flows(fp) == lp.flows
@@ -36,12 +35,12 @@ include("listutils.jl")
 
             fp = FlowProblem([1,1,2,3,2,3], [2,3,3,2,4,4], [2,2,3,2,1,5],
                               [5,1,4,3,2,0], [3,2,-1,-4])
-            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
             lp = linprog(fp)
             solveflows!(fp)
 
-            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
             @test flows(fp) == [1,2,2,0,1,3]
             @test prices(fp) == [9,4,0,0]
             @test flows(fp) == lp.flows
@@ -53,18 +52,17 @@ include("listutils.jl")
             fp = FlowProblem([1,1,2,2,2,3,5,4,5], [2,3,3,4,5,5,4,6,6],
                              [8,3,3,7,2,3,4,5,6], [3,2,2,5,2,4,5,3,4],
                              [9,0,0,0,0,-9])
-            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
             lp = linprog(fp)
             solveflows!(fp)
 
-            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
             @test flows(fp) == [6,3,0,4,2,3,0,4,5]
             @test flows(fp) == lp.flows
 
         end
 
-    end
     end
 
     # Note that degeneracy can potentially prevent MinCostFlow results from
@@ -124,12 +122,12 @@ include("listutils.jl")
              1, -15, 11, -10, 7, -1, -18, 15, 1, -14, -19, 10, -6, -8, 3, 16,
              19, -10, -15, -10, 15, 12, 16, -18, 104])
 
-        @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
         lp = linprog(fp) # Will complain if infeasible
         solveflows!(fp)
 
-        @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+        @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
@@ -138,57 +136,54 @@ include("listutils.jl")
         fp = FlowProblem([4,3,4,1,1,2,3,4,5,5,5,5], [1,1,2,4,5,5,5,5,1,2,3,4],
                          [19,9,3,9,9999,9999,9999,9999,9999,9999,9999,9999],
                          [1,1,5,2,0,0,0,0,9999,9999,9999,9999], [-2,-7,4,-12,17])
-        @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
         lp = linprog(fp) # Will complain if infeasible
         solveflows!(fp)
 
-        @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+        @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
     end
 
-    if false
     @testset "Random Networks" begin
 
         N, E = 40, 100
 
         rand(1234)
-        for i in 1:2500
+        for i in 1:250
 
             fp = randomproblem(N, E)
-            @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
             lp = linprog(fp) # Will complain if infeasible
             solveflows!(fp)
 
-            @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+            @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
             @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         end
 
     end
-    end
 
-    if false
     @testset "Random Hotstarts" begin
 
         N, E = 40, 100
 
         fp = randomproblem(N, E)
-        @test MinCostFlow.complementarityslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
         lp = linprog(fp)
         solveflows!(fp)
 
-        @test MinCostFlow.complementarityslackness(fp) # Solving should preserve CS
+        @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         # Randomly modify problem and re-solve
-        for i in 1:2500
+        for i in 1:250
 
             # Update injections and rebalance at fallback node
             for n in 1:N
@@ -202,22 +197,21 @@ include("listutils.jl")
             end
 
             # Ensure updates preserved CS
-            @test MinCostFlow.complementarityslackness(fp)
+            @test MinCostFlow.complementaryslackness(fp)
 
             # Re-solve
             lp = linprog(fp)
             solveflows!(fp)
 
-            @test MinCostFlow.complementarityslackness(fp)
+            @test MinCostFlow.complementaryslackness(fp)
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
             @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         end
 
     end
-    end
 
-    if false
+    if true
 
         Random.seed!(1234)
         @profile zeros(1)

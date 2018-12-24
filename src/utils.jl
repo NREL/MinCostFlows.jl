@@ -103,7 +103,7 @@ end
 
 nodeidx(fp::FlowProblem, node::Node) = findfirst(n -> n === node, fp.nodes)
 
-function complementarityslackness(fp::FlowProblem)
+function complementaryslackness(fp::FlowProblem)
 
     satisfied = true
 

@@ -2,7 +2,7 @@
 Implements the Relaxation dual-ascent method for solving
 min-cost flow problems, as described in Bertsekas (1998)
 """
-function solveflows!(fp::FlowProblem)
+function solveflows!(fp::FlowProblem; verbose::Bool=true)
 
     #elist = edgelist(fp)
     starttime = time()
@@ -21,8 +21,8 @@ function solveflows!(fp::FlowProblem)
         #println("Flows: ", flows(fp))
         #println("Injections: ", injections(fp))
         #println("Prices: ", prices(fp))
-        #@assert complementarityslackness(fp)
-        println("Starting major iteration")
+        #@assert complementaryslackness(fp)
+        #println("Starting major iteration")
 
         # Find a potential starting node for an augmenting path
         augmentingpathstart = firstpositiveimbalance(fp)
@@ -32,7 +32,7 @@ function solveflows!(fp::FlowProblem)
 
         # Reset the scan sets for this iteration
         resetSL!(fp, augmentingpathstart)
-        showSL(fp)
+        #showSL(fp)
 
         # Main iteration: update either flows or shadow prices
         minoriters += update!(fp, augmentingpathstart)
@@ -40,13 +40,13 @@ function solveflows!(fp::FlowProblem)
     end
 
     endtime = time()
-    elapsedtime = endtime - starttime
-    println(majoriters, " major iterations")
-    println(minoriters, " minor iterations")
-    println("Average ", minoriters/majoriters, " minor iterations per major iteration")
-    println("Solved in ", elapsedtime, "s")
-    println("Average ", elapsedtime/majoriters, "s per major iteration")
-    println("Average ", elapsedtime/minoriters, "s per minor iteration")
+    if verbose
+        elapsedtime = endtime - starttime
+        println(majoriters, " major iterations, ", minoriters, " minor iterations")
+        println("Average ", minoriters/majoriters, " minor iterations per major iteration")
+        println("Solved in ", elapsedtime, "s")
+    end
+
     return fp
 
 end
@@ -57,11 +57,11 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
     while true
 
         iters += 1
-        println("Starting minor iteration")
+        #println("Starting minor iteration")
 
         # Look for a candidate node i to scan and add to S
         i = augmentS!(fp)
-        showSL(fp)
+        #showSL(fp)
 
         # Update prices if it will improve the dual solution
         # or if there are no nodes left to scan
@@ -72,7 +72,7 @@ function update!(fp::FlowProblem, augmentingpathstart::Node)
 
         # Label neighbour nodes of i
         augmentingpathend = augmentL!(fp, i)
-        showSL(fp)
+        #showSL(fp)
 
         # Didn't find an augmenting path, try adding a different node
         augmentingpathend === nothing && continue
@@ -103,7 +103,7 @@ Empties the set S and reduces the set L to a single element, `j`
 """
 function resetSL!(fp::FlowProblem, j::Node)
 
-    println("Resetting SL...")
+    #println("Resetting SL...")
     node = fp.firstL
     while node !== nothing
         node.inL = false
@@ -126,7 +126,7 @@ to S. If S == L, return `nothing` and make no changes.
 """
 function augmentS!(fp::FlowProblem)
 
-    println("Augmenting S...")
+    #println("Augmenting S...")
     i = fp.firstL
     while i !== nothing
 
@@ -173,7 +173,7 @@ dual objective function if prices were updated
 """
 function dualascendable(fp::FlowProblem)
 
-    println("Gradient: ", fp.ascentgradient)
+    #println("Gradient: ", fp.ascentgradient)
     return fp.ascentgradient > 0
 
 end
@@ -185,7 +185,7 @@ returning one such added node that has a positive imbalance
 """
 function augmentL!(fp::FlowProblem, i::N)::Union{N,Nothing} where {N<:Node}
 
-    println("Augmenting L...")
+    #println("Augmenting L...")
     negativeimbalancenode = nothing
 
     # Iterate through balanced edges ji connecting j to i
@@ -248,7 +248,7 @@ Updates the flows on the augmenting path from `startnode` to `endnode`
 """
 function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
 
-    println("Updating flows...")
+    #println("Updating flows...")
     delta = min(startnode.imbalance, -endnode.imbalance)
 
     # First pass, determine value of delta
@@ -308,8 +308,36 @@ function updateprices!(fp::FlowProblem)
         return "$a=>$b(rc=$rc, flow=$fl)"
     end
 
-    println("Updating prices...")
+    #println("Updating prices...")
     gamma = typemax(Int)
+
+    i = fp.firstL
+    while i !== nothing
+        if i.inS
+
+            i_idx = nodeidx(fp, i)
+
+            #println("Edges to $(i_idx):")
+            #printlist(i, :firstto, :nextto, printedge)
+            #print("Active: ")
+            #printlist(i, :firstactiveto, :nextactiveto, printedge)
+            #print("Balanced: ")
+            #printlist(i, :firstbalancedto, :nextbalancedto, printedge)
+            #print("Inactive: ")
+            #printlist(i, :firstinactiveto, :nextinactiveto, printedge)
+
+            #println("Edges from $(i_idx):")
+            #printlist(i, :firstfrom, :nextfrom, printedge)
+            #print("Active: ")
+            #printlist(i, :firstactivefrom, :nextactivefrom, printedge)
+            #print("Balanced: ")
+            #printlist(i, :firstbalancedfrom, :nextbalancedfrom, printedge)
+            #print("Inactive: ")
+            #printlist(i, :firstinactivefrom, :nextinactivefrom, printedge)
+
+        end
+        i = i.nextL
+    end
 
     # TODO: Search with S or notS, based on set sizes (or count of edges in set?)
     i = fp.firstL
@@ -349,39 +377,7 @@ function updateprices!(fp::FlowProblem)
 
     end
 
-    if gamma === typemax(Int)
-
-        i = fp.firstL
-        while i !== nothing
-            if i.inS
-
-                i_idx = nodeidx(fp, i)
-
-                println("Edges to $(i_idx):")
-                printlist(i, :firstto, :nextto, printedge)
-                print("Active: ")
-                printlist(i, :firstactiveto, :nextactiveto, printedge)
-                print("Balanced: ")
-                printlist(i, :firstbalancedto, :nextbalancedto, printedge)
-                print("Inactive: ")
-                printlist(i, :firstinactiveto, :nextinactiveto, printedge)
-
-                println("Edges from $(i_idx):")
-                printlist(i, :firstfrom, :nextfrom, printedge)
-                print("Active: ")
-                printlist(i, :firstactivefrom, :nextactivefrom, printedge)
-                print("Balanced: ")
-                printlist(i, :firstbalancedfrom, :nextbalancedfrom, printedge)
-                print("Inactive: ")
-                printlist(i, :firstinactivefrom, :nextinactivefrom, printedge)
-
-            end
-            i = i.nextL
-        end
-
-        error("gamma === typemax(Int)")
-
-    end
+    gamma === typemax(Int) && error("gamma === typemax(Int)")
 
     # Flows have changed, so recalculate imbalances
     # TODO: Do this more intelligently on the fly
@@ -539,6 +535,7 @@ end
 # #TODO: Should do this on the fly / with iterative updates instead
 function calculateascentgradient!(fp::FlowProblem)
 
+    fp.ascentgradient = 0
     # TODO: Use S instead
     i = fp.firstL
     while i !== nothing
