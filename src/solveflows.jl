@@ -28,14 +28,14 @@ function solveflows!(fp::FlowProblem; verbose::Bool=false)
 
         #println("Flows: ", flows(fp))
         #println("Prices: ", prices(fp))
-        #@assert complementaryslackness(fp)
+        @assert complementaryslackness(fp)
         #println("Starting major iteration")
 
         majoriters += 1
 
         # First try a single-node relaxation iteration,
         # moving to next iteration if it makes changes
-        singlenodeupdate!(fp, positiveimbalancenode) && continue
+        singlenodeupdate!(positiveimbalancenode) && continue
 
         # If the single-node iteration doesn't change anything, 
         # run a multi-node relaxation iteration, updating either
@@ -117,5 +117,98 @@ function calculateascentgradient!(fp::FlowProblem)
         i = i.nextS
 
     end
+
+end
+
+function decreasereducedcost!(i::Node, ij::Edge{Node}, j::Node, pricechange::Int)
+
+    oldreducedcost = ij.reducedcost
+    newreducedcost = oldreducedcost - pricechange # Price change assumed positive on node i
+    ij.reducedcost = newreducedcost
+
+    if oldreducedcost === 0 # ij moved from balanced -> active
+
+        # Remove edge from i's balancedfrom adjacency list
+        remove!(ij, :prevbalancedfrom, :nextbalancedfrom,
+                i, :firstbalancedfrom, :lastbalancedfrom)
+
+        # Remove edge from j's balancedto adjacency list
+        remove!(ij, :prevbalancedto, :nextbalancedto,
+                j, :firstbalancedto, :lastbalancedto)
+
+        # Add edge to i's activefrom adjacency list
+        addend!(ij, :prevactivefrom, :nextactivefrom,
+                i, :firstactivefrom, :lastactivefrom)
+
+        # Add edge to j's activeto adjacency list
+        addend!(ij, :prevactiveto, :nextactiveto,
+                j, :firstactiveto, :lastactiveto)
+
+    elseif newreducedcost === 0 # ij moved from inactive -> balanced
+
+        # Remove edge from i's inactivefrom adjacency list
+        remove!(ij, :previnactivefrom, :nextinactivefrom,
+                i, :firstinactivefrom, :lastinactivefrom)
+
+        # Remove edge from j's inactiveto adjacency list
+        remove!(ij, :previnactiveto, :nextinactiveto,
+                j, :firstinactiveto, :lastinactiveto)
+
+        # Add edge to i's balancedfrom adjacency list
+        addend!(ij, :prevbalancedfrom, :nextbalancedfrom,
+                i, :firstbalancedfrom, :lastbalancedfrom)
+
+        # Add edge to j's balancedto adjacency list
+        addend!(ij, :prevbalancedto, :nextbalancedto,
+                j, :firstbalancedto, :lastbalancedto)
+
+    end
+
+end
+
+function increasereducedcost!(i::Node, ij::Edge{Node}, j::Node, pricechange::Int)
+
+    oldreducedcost = ij.reducedcost
+    newreducedcost = oldreducedcost + pricechange # Price change assumed positive on node j
+    ij.reducedcost = newreducedcost
+
+    if oldreducedcost === 0 # ij moved from balanced -> inactive
+
+        # Remove edge from i's balancedfrom adjacency list
+        remove!(ij, :prevbalancedfrom, :nextbalancedfrom,
+                i, :firstbalancedfrom, :lastbalancedfrom)
+
+        # Remove edge from j's balancedto adjacency list
+        remove!(ij, :prevbalancedto, :nextbalancedto,
+                j, :firstbalancedto, :lastbalancedto)
+
+        # Add edge to i's inactivefrom adjacency list
+        addend!(ij, :previnactivefrom, :nextinactivefrom,
+                i, :firstinactivefrom, :lastinactivefrom)
+
+        # Add edge to j's inactiveto adjacency list
+        addend!(ij, :previnactiveto, :nextinactiveto,
+                j, :firstinactiveto, :lastinactiveto)
+
+    elseif newreducedcost === 0 # ji moved from active -> balanced
+
+        # Remove edge from i's activefrom adjacency list
+        remove!(ij, :prevactivefrom, :nextactivefrom,
+                i, :firstactivefrom, :lastactivefrom)
+
+        # Remove edge from j's activeto adjacency list
+        remove!(ij, :prevactiveto, :nextactiveto,
+                j, :firstactiveto, :lastactiveto)
+
+        # Add edge to i's balancedfrom adjacency list
+        addend!(ij, :prevbalancedfrom, :nextbalancedfrom,
+                i, :firstbalancedfrom, :lastbalancedfrom)
+
+        # Add edge to j's balancedto adjacency list
+        addend!(ij, :prevbalancedto, :nextbalancedto,
+                j, :firstbalancedto, :lastbalancedto)
+
+    end
+
 
 end

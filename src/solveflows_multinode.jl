@@ -340,51 +340,8 @@ function updateprices!(fp::FlowProblem)
 
             j = ij.nodeto
 
-            if !j.inS # S->S edges don't change
-
-                oldreducedcost = ij.reducedcost 
-                newreducedcost = oldreducedcost - gamma
-                ij.reducedcost = newreducedcost
-
-                if oldreducedcost === 0 # ij moved from balanced -> active
-
-                    # Remove edge from i's balancedfrom adjacency list
-                    remove!(ij, :prevbalancedfrom, :nextbalancedfrom,
-                            i, :firstbalancedfrom, :lastbalancedfrom)
-
-                    # Remove edge from j's balancedto adjacency list
-                    remove!(ij, :prevbalancedto, :nextbalancedto,
-                            j, :firstbalancedto, :lastbalancedto)
-
-                    # Add edge to i's activefrom adjacency list
-                    addend!(ij, :prevactivefrom, :nextactivefrom,
-                            i, :firstactivefrom, :lastactivefrom)
-
-                    # Add edge to j's activeto adjacency list
-                    addend!(ij, :prevactiveto, :nextactiveto,
-                            j, :firstactiveto, :lastactiveto)
-
-                elseif newreducedcost === 0 # ij moved from inactive -> balanced
-
-                    # Remove edge from i's inactivefrom adjacency list
-                    remove!(ij, :previnactivefrom, :nextinactivefrom,
-                            i, :firstinactivefrom, :lastinactivefrom)
-
-                    # Remove edge from j's inactiveto adjacency list
-                    remove!(ij, :previnactiveto, :nextinactiveto,
-                            j, :firstinactiveto, :lastinactiveto)
-
-                    # Add edge to i's balancedfrom adjacency list
-                    addend!(ij, :prevbalancedfrom, :nextbalancedfrom,
-                            i, :firstbalancedfrom, :lastbalancedfrom)
-
-                    # Add edge to j's balancedto adjacency list
-                    addend!(ij, :prevbalancedto, :nextbalancedto,
-                            j, :firstbalancedto, :lastbalancedto)
-
-                end
-
-            end
+            # S->S edges don't change
+            j.inS || decreasereducedcost!(i, ij, j, gamma)
 
             ij = ij.nextfrom
 
@@ -396,51 +353,8 @@ function updateprices!(fp::FlowProblem)
 
             j = ji.nodefrom
 
-            if !j.inS # S->S edges don't change
-
-                oldreducedcost = ji.reducedcost
-                newreducedcost = oldreducedcost + gamma
-                ji.reducedcost = newreducedcost
-
-                if oldreducedcost === 0 # ji moved from balanced -> inactive
-
-                    # Remove edge from j's balancedfrom adjacency list
-                    remove!(ji, :prevbalancedfrom, :nextbalancedfrom,
-                            j, :firstbalancedfrom, :lastbalancedfrom)
-
-                    # Remove edge from i's balancedto adjacency list
-                    remove!(ji, :prevbalancedto, :nextbalancedto,
-                            i, :firstbalancedto, :lastbalancedto)
-
-                    # Add edge to j's inactivefrom adjacency list
-                    addend!(ji, :previnactivefrom, :nextinactivefrom,
-                            j, :firstinactivefrom, :lastinactivefrom)
-
-                    # Add edge to i's inactiveto adjacency list
-                    addend!(ji, :previnactiveto, :nextinactiveto,
-                            i, :firstinactiveto, :lastinactiveto)
-
-                elseif newreducedcost === 0 # ji moved from active -> balanced
-
-                    # Remove edge from j's activefrom adjacency list
-                    remove!(ji, :prevactivefrom, :nextactivefrom,
-                            j, :firstactivefrom, :lastactivefrom)
-
-                    # Remove edge from i's activeto adjacency list
-                    remove!(ji, :prevactiveto, :nextactiveto,
-                            i, :firstactiveto, :lastactiveto)
-
-                    # Add edge to j's balancedfrom adjacency list
-                    addend!(ji, :prevbalancedfrom, :nextbalancedfrom,
-                            j, :firstbalancedfrom, :lastbalancedfrom)
-
-                    # Add edge to i's balancedto adjacency list
-                    addend!(ji, :prevbalancedto, :nextbalancedto,
-                            i, :firstbalancedto, :lastbalancedto)
-
-                end
-
-            end
+            # S->S edges don't change
+            j.inS || increasereducedcost!(j, ji, i, gamma)
 
             ji = ji.nextto
 

@@ -1,46 +1,41 @@
 """
 Returns true if the process updated flows or prices, and false otherwise.
 """
-function singlenodeupdate!(fp::FlowProblem, i::Node)
+function singlenodeupdate!(i::Node)
 
-    return false
     statechanged = false
+    x = imbalancecomparator(i)
 
     while true
 
-        # Determine B+ and B-
         # Step 1: Compare i.imbalance with B+ and B- room
-        x = 0
-        for edge in Bplus
-            x += edge.limit
-            x -= edge.flow
-        end
-        for edge in Bminus
-            x += edge.flow
-        end
-
         if i.imbalance >= x
 
             # Step 4: Max/min out flows and increase i.price
-            updateprice!(fp, i)
+            i.imbalance -= x
+            maxminflows!(i)
+            updateprice!(i)
             statechanged = true
-            i.imbalance > 0 ? continue : break
 
-        elseif i.imbalance > 0 && length(Bplus) > 0
+            if i.imbalance > 0
+                x = imbalancecomparator(i)
+                continue
+            else
+                break
+            end
 
-            # Step 2: Outgoing arc flow adjustment
-            updateoutgoingflows!(fp, i)
-            statechanged = true
-            continue
+        elseif i.imbalance > 0
 
-        elseif i.imbalance > 0 && length(Bminus) > 0
+            # Step 2 or 3: Flow adjustment
+            if updateoutgoingflow!(i) || updateincomingflow!(i)
+                statechanged = true
+                continue
+            else
+                break
+            end
 
-            # Step 3: Incoming arc flow adjustment
-            updateincomingflows!(fp, i)
-            statechanged = true
-            continue
+        else # i.imbalance == 0
 
-        else # No nodes in B, or i.imbalance == 0
             break
 
         end
@@ -51,14 +46,126 @@ function singlenodeupdate!(fp::FlowProblem, i::Node)
 
 end
 
-function updateoutgoingflows!(fp::FlowProblem, i::Node)
+function imbalancecomparator(i::Node)
+
+    x = 0
+
+    ij = i.firstbalancedfrom
+    while ij !== nothing
+        if ij.flow < ij.limit
+            x += ij.limit
+            x -= ij.flow
+        end
+        ij = ij.nextbalancedfrom
+    end
+
+    ji = i.firstbalancedto
+    while ji !== nothing
+        if ji.flow > 0
+            x += ji.flow
+        end
+        ji = ji.nextbalancedto
+    end
+
+    return x
 
 end
 
-function updateincomingflows!(fp::FlowProblem, i::Node)
+function maxminflows!(i::Node)
+
+    ij = i.firstbalancedfrom
+    while ij !== nothing
+        ij.flow = ij.limit
+        ij = ij.nextbalancedfrom
+    end
+
+    ji = i.firstbalancedto
+    while ji !== nothing
+        ji.flow = 0
+        ji = ji.nextbalancedto
+    end
+
+    return
 
 end
 
-function updateprice!(fp::FlowProblem, i::Node)
+function updateprice!(i::Node)
+
+    newprice = typemax(Int)
+
+    ij = i.firstinactivefrom
+    while ij !== nothing
+        j = ij.nodeto
+        newprice = min(newprice, j.price + ij.cost)
+        ij = ij.nextinactivefrom
+    end
+
+    ji = i.firstactiveto
+    while ji !== nothing
+        j = ji.nodefrom
+        newprice = min(newprice, j.price - ji.cost)
+        ji = ji.nextactiveto
+    end
+
+    pricechange = newprice - i.price
+    i.price = newprice
+
+    # Update reduced costs + edge categories
+
+    # Edge out of i have reduced cost decreased by pricechange
+    ij = i.firstfrom
+    while ij !== nothing
+        decreasereducedcost!(i, ij, ij.nodeto, pricechange)
+        ij = ij.nextfrom
+    end
+
+    # Edge in to i have reduced cost increased by pricechange
+    ji = i.firstto
+    while ji !== nothing
+        increasereducedcost!(ji.nodefrom, ji, i, pricechange)
+        ji = ji.nextto
+    end
+
+end
+
+function updateoutgoingflow!(i::Node)
+
+    # Choose j
+    ij = i.firstbalancedfrom
+    j = i # Initialize j
+    while true
+        ij === nothing && return false
+        j = ij.nodeto
+        j.imbalance < 0 && ij.flow < ij.limit && break
+        ij = ij.nextfrom
+    end
+
+    delta = min(i.imbalance, -j.imbalance, ij.limit - ij.flow)
+    ij.flow += delta
+    i.imbalance -= delta
+    j.imbalance += delta
+
+    return true
+
+end
+
+function updateincomingflow!(i::Node)
+
+    # Choose j
+    ji = i.firstbalancedto
+    j = i # Initialize j
+    while true
+        ji === nothing && return false
+        j = ji.nodefrom
+        j.imbalance < 0 && ji.flow > 0 && break
+        ji = ji.nextto
+    end
+
+    delta = min(i.imbalance, -j.imbalance, ji.flow)
+    ji.flow -= delta
+    j.imbalance += delta
+    i.imbalance -= delta
+
+    return true
 
 end
