@@ -9,6 +9,7 @@ using Random
 
 include("utils.jl")
 include("listutils.jl")
+verbose = true
 
 @testset "MinCostFlow" begin
 
@@ -237,7 +238,7 @@ include("listutils.jl")
         @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
         lp = linprog(fp)
-        solveflows!(fp, verbose=true)
+        solveflows!(fp, verbose=verbose)
 
         @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
@@ -262,7 +263,7 @@ include("listutils.jl")
 
             # Re-solve
             lp = linprog(fp)
-            solveflows!(fp, verbose=true)
+            solveflows!(fp, verbose=verbose)
 
             @test MinCostFlow.complementaryslackness(fp)
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
@@ -272,7 +273,7 @@ include("listutils.jl")
 
     end
 
-    if false
+    if true
 
         Random.seed!(1234)
         @profile zeros(1)

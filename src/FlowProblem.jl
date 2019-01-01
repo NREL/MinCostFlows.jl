@@ -98,29 +98,29 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
         nodeto = edge.nodeto
 
         # Add edge to nodefrom's from adjacency list
-        addstart!(edge, :nextfrom, nodefrom, :firstfrom)
+        @addstart!(edge, :nextfrom, nodefrom, :firstfrom)
 
         # Add edge to nodeto's to adjacency list
-        addstart!(edge, :nextto, nodeto, :firstto)
+        @addstart!(edge, :nextto, nodeto, :firstto)
 
         if edge.reducedcost === 0 # Balanced edge
 
             # Add edge to nodefrom's balancedfrom adjacency list
-            addend!(edge, :prevbalancedfrom, :nextbalancedfrom,
+            @addend!(edge, :prevbalancedfrom, :nextbalancedfrom,
                     nodefrom, :firstbalancedfrom, :lastbalancedfrom)
 
             # Add edge to nodeto's balancedto adjacency list
-            addend!(edge, :prevbalancedto, :nextbalancedto,
+            @addend!(edge, :prevbalancedto, :nextbalancedto,
                     nodeto, :firstbalancedto, :lastbalancedto)
 
         else # Inactive edge (as no active edges with zero-price initialization)
 
             # Add edge to nodefrom's inactivefrom adjacency list
-            addend!(edge, :previnactivefrom, :nextinactivefrom,
+            @addend!(edge, :previnactivefrom, :nextinactivefrom,
                     nodefrom, :firstinactivefrom, :lastinactivefrom)
 
             # Add edge to nodeto's inactiveto adjacency list
-            addend!(edge, :previnactiveto, :nextinactiveto,
+            @addend!(edge, :previnactiveto, :nextinactiveto,
                     nodeto, :firstinactiveto, :lastinactiveto)
 
         end

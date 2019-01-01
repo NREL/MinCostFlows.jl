@@ -1,108 +1,132 @@
 # Singly-linked lists
 
-function addstart!(elem, next::Symbol, context, first::Symbol)
+macro addstart!(elem::Symbol, next::QuoteNode, context::Symbol, first::QuoteNode)
 
-    oldfirstelem = getproperty(context, first)
+    return quote
 
-    if oldfirstelem === nothing # list is empty
+        elem_val = $(esc(elem))
+        context_val = $(esc(context))
+        oldfirstelem = getproperty(context_val, $first)
 
-        # new element is last as well as first
-        setproperty!(elem, next, nothing)
+        if oldfirstelem === nothing # list is empty
 
-    else # other elements exist
+            # new element is last as well as first
+            setproperty!(elem_val, $next, nothing)
 
-        # add elem before current first element
-        setproperty!(elem, next, oldfirstelem)
+        else # other elements exist
+
+            # add elem before current first element
+            setproperty!(elem_val, $next, oldfirstelem)
+
+        end
+
+        # elem is now first element
+        setproperty!(context_val, $first, elem_val)
 
     end
-
-    # elem is now first element
-    setproperty!(context, first, elem)
 
 end
 
-function remove!(context, first::Symbol, next::Symbol)
+macro remove!(context::Symbol, first::QuoteNode, next::QuoteNode)
 
-    oldfirstelem = getproperty(context, first)
+    return quote
 
-    if oldfirstelem !== nothing # nothing to do for an empty list
-        newfirstelem = getproperty(oldfirstelem, next)
-        setproperty!(context, first, newfirstelem)
+        context_val = $(esc(context))
+        oldfirstelem = getproperty(context_val, $first)
+
+        if oldfirstelem !== nothing # nothing to do for an empty list
+            newfirstelem = getproperty(oldfirstelem, $next)
+            setproperty!(context_val, $first, newfirstelem)
+        end
+
     end
-
-    return
 
 end
 
 # Doubly-linked lists
 
-function addstart!(elem, prev::Symbol, next::Symbol, context, first::Symbol, last::Symbol)
+macro addstart!(elem::Symbol, prev::QuoteNode, next::QuoteNode, context::Symbol, first::QuoteNode, last::QuoteNode)
 
-    oldfirstelem = getproperty(context, first)
+    return quote
 
-    if oldfirstelem === nothing # list is empty
+        elem_val = $(esc(elem))
+        context_val = $(esc(context))
+        oldfirstelem = getproperty(context_val, $first)
 
-        # new element is last as well as first
-        setproperty!(elem, next, nothing)
-        setproperty!(context, last, elem)
+        if oldfirstelem === nothing # list is empty
 
-    else # other elements exist
+            # new element is last as well as first
+            setproperty!(elem_val, $next, nothing)
+            setproperty!(context_val, $last, elem_val)
 
-	# add elem before current first element
-        setproperty!(elem, next, oldfirstelem)
-        setproperty!(oldfirstelem, prev, elem)
+        else # other elements exist
+
+            # add elem before current first element
+            setproperty!(elem_val, $next, oldfirstelem)
+            setproperty!(oldfirstelem, $prev, elem_val)
+
+        end
+
+        # elem is now first element
+        setproperty!(context_val, $first, elem_val)
+        setproperty!(elem_val, $prev, nothing)
 
     end
-
-    # elem is now first element
-    setproperty!(context, first, elem)
-    setproperty!(elem, prev, nothing)
 
 end
 
-function addend!(elem, prev::Symbol, next::Symbol, context, first::Symbol, last::Symbol)
+macro addend!(elem::Symbol, prev::QuoteNode, next::QuoteNode, context::Symbol, first::QuoteNode, last::QuoteNode)
 
-    oldlastelem = getproperty(context, last)
+    return quote
 
-    if oldlastelem === nothing # list is empty
+        elem_val = $(esc(elem))
+        context_val = $(esc(context))
+        oldlastelem = getproperty(context_val, $last)
 
-        # new element is first as well as last
-        setproperty!(elem, prev, nothing)
-        setproperty!(context, first, elem)
+        if oldlastelem === nothing # list is empty
 
-    else # other elements exist
+            # new element is first as well as last
+            setproperty!(elem_val, $prev, nothing)
+            setproperty!(context_val, $first, elem_val)
 
-        # add elem after current last element
-        setproperty!(elem, prev, oldlastelem)
-        setproperty!(oldlastelem, next, elem)
+        else # other elements exist
+
+            # add elem after current last element
+            setproperty!(elem_val, $prev, oldlastelem)
+            setproperty!(oldlastelem, $next, elem_val)
+
+        end
+
+        # elem is now last element
+        setproperty!(context_val, $last, elem_val)
+        setproperty!(elem_val, $next, nothing)
 
     end
-
-    # elem is now last element
-    setproperty!(context, last, elem)
-    setproperty!(elem, next, nothing)
 
 end
 
-# e.g. remove!(ij, :prevbalancedto, :nextbalancedto, i, :firstbalancedto, :lastbalancedto)
-function remove!(elem, prev::Symbol, next::Symbol, context, first::Symbol, last::Symbol)
+macro remove!(elem::Symbol, prev::QuoteNode, next::QuoteNode, context::Symbol, first::QuoteNode, last::QuoteNode)
 
-    prevelem = getproperty(elem, prev)
-    nextelem = getproperty(elem, next)
+    return quote
 
-    if prevelem === nothing # elem is at start of list
-        setproperty!(context, first, nextelem)
-    else
-        setproperty!(prevelem, next, nextelem)
+        elem_val = $(esc(elem))
+        context_val = $(esc(context))
+        prevelem = getproperty(elem_val, $prev)
+        nextelem = getproperty(elem_val, $next)
+
+        if prevelem === nothing # elem is at start of list
+            setproperty!(context_val, $first, nextelem)
+        else
+            setproperty!(prevelem, $next, nextelem)
+        end
+
+        if nextelem === nothing # elem is at end of list
+            setproperty!(context_val, $last, prevelem)
+        else
+            setproperty!(nextelem, $prev, prevelem)
+        end
+
     end
-
-    if nextelem === nothing # elem is at end of list
-        setproperty!(context, last, prevelem)
-    else
-        setproperty!(nextelem, prev, prevelem)
-    end
-
-    return
 
 end
 

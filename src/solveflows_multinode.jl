@@ -88,8 +88,8 @@ function augmentS!(fp::FlowProblem)
 
     # i joins S and leaves LnotS
     i.inS = true
-    addend!(i, :prevS, :nextS, fp, :firstS, :lastS)
-    remove!(i, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
+    @addend!(i, :prevS, :nextS, fp, :firstS, :lastS)
+    @remove!(i, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
 
     # Update the ascent gradient with i included in S
     ij = i.firstbalancedfrom
@@ -149,7 +149,7 @@ function augmentL!(fp::FlowProblem, i::N)::Union{N,Nothing} where {N<:Node}
 
             # Add j to LnotS
             j.inL = true
-            addend!(j, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
+            @addend!(j, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
 
             # Save path back to i
             j.augpathprev = ji
@@ -173,7 +173,7 @@ function augmentL!(fp::FlowProblem, i::N)::Union{N,Nothing} where {N<:Node}
 
             # Add j to LnotS
             j.inL = true
-            addend!(j, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
+            @addend!(j, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
 
             # Save path back to i
             j.augpathprev = ij
