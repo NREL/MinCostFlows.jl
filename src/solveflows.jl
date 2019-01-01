@@ -20,22 +20,21 @@ function solveflows!(fp::FlowProblem; verbose::Bool=false)
 
     while true
 
+        #println("Flows: ", flows(fp))
+        #println("Prices: ", prices(fp))
+        #@assert complementaryslackness(fp)
+
         # Find a node with positive imbalance
         positiveimbalancenode = firstpositiveimbalance(fp)
 
         # If no starting node found, problem is either solved or infeasible
         positiveimbalancenode === nothing && break
 
-        #println("Flows: ", flows(fp))
-        #println("Prices: ", prices(fp))
-        @assert complementaryslackness(fp)
-        #println("Starting major iteration")
-
         majoriters += 1
 
         # First try a single-node relaxation iteration,
         # moving to next iteration if it makes changes
-        singlenodeupdate!(positiveimbalancenode) && continue
+        singlenodeupdate!(fp, positiveimbalancenode) && continue
 
         # If the single-node iteration doesn't change anything, 
         # run a multi-node relaxation iteration, updating either
@@ -51,7 +50,7 @@ function solveflows!(fp::FlowProblem; verbose::Bool=false)
         majoriters_singlenode = majoriters - majoriters_multinode
         println(majoriters, " major iterations: ",
                 majoriters_singlenode, " single-node major iterations, ",
-                majoriters_multinode, "multi-node major iterations with ",
+                majoriters_multinode, " multi-node major iterations with ",
                 minoriters, " multi-node minor iterations")
         #println("Average ", minoriters/majoriters, " minor iterations per major multi-node iteration")
         println("Solved in ", elapsedtime, "s")

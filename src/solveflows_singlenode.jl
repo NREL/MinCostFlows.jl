@@ -1,13 +1,15 @@
 """
 Returns true if the process updated flows or prices, and false otherwise.
 """
-function singlenodeupdate!(i::Node)
+function singlenodeupdate!(fp::FlowProblem, i::Node)
 
+    #println("Running single-node major iteration...")
     statechanged = false
     x = imbalancecomparator(i)
 
     while true
 
+        #println("Running single-node minor iteration...")
         # Step 1: Compare i.imbalance with B+ and B- room
         if i.imbalance >= x
 
@@ -16,6 +18,10 @@ function singlenodeupdate!(i::Node)
             maxminflows!(i)
             updateprice!(i)
             statechanged = true
+
+            #println("Updating flows and prices")
+            #println("Flows: ", flows(fp))
+            #println("Prices: ", prices(fp))
 
             if i.imbalance > 0
                 x = imbalancecomparator(i)
@@ -28,6 +34,9 @@ function singlenodeupdate!(i::Node)
 
             # Step 2 or 3: Flow adjustment
             if updateoutgoingflow!(i) || updateincomingflow!(i)
+                #println("Updating single-line flow")
+                #println("Flows: ", flows(fp))
+                #println("Prices: ", prices(fp))
                 statechanged = true
                 continue
             else
@@ -73,14 +82,20 @@ end
 
 function maxminflows!(i::Node)
 
+    # i.imbalance already taken care of in main function
+
     ij = i.firstbalancedfrom
     while ij !== nothing
+        j = ij.nodeto
+        j.imbalance += ij.limit - ij.flow
         ij.flow = ij.limit
         ij = ij.nextbalancedfrom
     end
 
     ji = i.firstbalancedto
     while ji !== nothing
+        j = ji.nodefrom
+        j.imbalance += ji.flow
         ji.flow = 0
         ji = ji.nextbalancedto
     end
@@ -137,7 +152,7 @@ function updateoutgoingflow!(i::Node)
         ij === nothing && return false
         j = ij.nodeto
         j.imbalance < 0 && ij.flow < ij.limit && break
-        ij = ij.nextfrom
+        ij = ij.nextbalancedfrom
     end
 
     delta = min(i.imbalance, -j.imbalance, ij.limit - ij.flow)
@@ -158,7 +173,7 @@ function updateincomingflow!(i::Node)
         ji === nothing && return false
         j = ji.nodefrom
         j.imbalance < 0 && ji.flow > 0 && break
-        ji = ji.nextto
+        ji = ji.nextbalancedto
     end
 
     delta = min(i.imbalance, -j.imbalance, ji.flow)

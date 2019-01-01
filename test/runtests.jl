@@ -237,7 +237,7 @@ include("listutils.jl")
         @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
 
         lp = linprog(fp)
-        solveflows!(fp)
+        solveflows!(fp, verbose=true)
 
         @test MinCostFlow.complementaryslackness(fp) # Solving should preserve CS
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
@@ -262,7 +262,7 @@ include("listutils.jl")
 
             # Re-solve
             lp = linprog(fp)
-            solveflows!(fp)
+            solveflows!(fp, verbose=true)
 
             @test MinCostFlow.complementaryslackness(fp)
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
@@ -272,7 +272,7 @@ include("listutils.jl")
 
     end
 
-    if true
+    if false
 
         Random.seed!(1234)
         @profile zeros(1)

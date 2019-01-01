@@ -3,13 +3,14 @@ function multinodeupdate!(fp::FlowProblem, augmentingpathstart::Node)
     iters = 0
 
     # Reset the scan sets for this iteration
+    #println("Running multi-node major iteration")
     resetSL!(fp, augmentingpathstart)
     #showSL(fp)
 
     while true
 
         iters += 1
-        #println("Starting minor iteration")
+        #println("Running multi-node minor iteration")
 
         # Look for a candidate node i to scan and add to S
         i = augmentS!(fp) # ~ 1/3 of time here
