@@ -1,6 +1,3 @@
-defzero(::Nothing) = 0
-defzero(x::Int) = x
-
 function edgelist(fp::FlowProblem)
 
     edgelist = Vector{Pair{Int,Int}}(undef, length(fp.edges))
@@ -32,72 +29,6 @@ function showSL(fp::FlowProblem)
 
     println("]")
     println("S: ", S)
-
-end
-
-function showSinout(fp::FlowProblem)
-
-    n_edges = length(fp.edges)
-
-    print("intoS: [")
-    intoS = 0
-    edge = fp.firstintoS
-    while edge !== nothing
-
-        if edge.previntoS !== nothing
-            i = nodeidx(fp, edge.previntoS.nodefrom)
-            j = nodeidx(fp, edge.previntoS.nodeto)
-            print("($i => $j) <- ")
-        end
-
-        i = nodeidx(fp, edge.nodefrom)
-        j = nodeidx(fp, edge.nodeto)
-        print("($i => $j)")
-
-        if edge.nextintoS !== nothing
-            i = nodeidx(fp, edge.nextintoS.nodefrom)
-            j = nodeidx(fp, edge.nextintoS.nodeto)
-            print(" -> ($i => $j)")
-        end
-        print(", ")
-
-        intoS += 1
-        intoS > n_edges && error("intoS loop!")
-        edge = edge.nextintoS
-
-    end
-    println("]")
-
-    print("outofS: [")
-    outofS = 0
-    edge = fp.firstoutofS
-    while edge !== nothing
-
-        if edge.prevoutofS !== nothing
-            i = nodeidx(fp, edge.prevoutofS.nodefrom)
-            j = nodeidx(fp, edge.prevoutofS.nodeto)
-            print("($i => $j) <- ")
-        end
-
-        i = nodeidx(fp, edge.nodefrom)
-        j = nodeidx(fp, edge.nodeto)
-        print("($i => $j)")
-
-        if edge.nextoutofS !== nothing
-            i = nodeidx(fp, edge.nextoutofS.nodefrom)
-            j = nodeidx(fp, edge.nextoutofS.nodeto)
-            print(" -> ($i => $j)")
-        end
-        print(", ")
-
-        outofS += 1
-        outofS > n_edges && error("outofS loop!")
-        edge = edge.nextoutofS
-
-    end
-    println("]")
-
-    return intoS, outofS
 
 end
 

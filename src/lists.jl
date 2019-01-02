@@ -36,7 +36,11 @@ macro remove!(context::Symbol, first::QuoteNode, next::QuoteNode)
 
         if oldfirstelem !== nothing # nothing to do for an empty list
             newfirstelem = getproperty(oldfirstelem, $next) # Type uncertainty here bottlenecks
-            setproperty!(context_val, $first, newfirstelem)
+            if newfirstelem === nothing
+                setproperty!(context_val, $first, nothing)
+            else
+                setproperty!(context_val, $first, newfirstelem)
+            end
         end
 
     end
@@ -114,16 +118,26 @@ macro remove!(elem::Symbol, prev::QuoteNode, next::QuoteNode, context::Symbol, f
         prevelem = getproperty(elem_val, $prev)
         nextelem = getproperty(elem_val, $next)
 
-        if prevelem === nothing # elem is at start of list
-            setproperty!(context_val, $first, nextelem)
+        if prevelem === nothing
+            if nextelem === nothing
+                # elem was only element in list
+                setproperty!(context_val, $first, nothing)
+                setproperty!(context_val, $last, nothing)
+            else
+                # elem was first in list
+                setproperty!(context_val, $first, nextelem)
+                setproperty!(nextelem, $prev, nothing)
+            end
         else
-            setproperty!(prevelem, $next, nextelem)
-        end
-
-        if nextelem === nothing # elem is at end of list
-            setproperty!(context_val, $last, prevelem)
-        else
-            setproperty!(nextelem, $prev, prevelem)
+            if nextelem === nothing
+                # elem was last in list
+                setproperty!(prevelem, $next, nothing)
+                setproperty!(context_val, $last, prevelem)
+            else
+                # elem was neither first nor last in list
+                setproperty!(prevelem, $next, nextelem)
+                setproperty!(nextelem, $prev, prevelem)
+            end
         end
 
     end

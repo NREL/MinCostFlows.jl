@@ -4,23 +4,13 @@ min-cost flow problems, as described in Bertsekas (1998)
 """
 function solveflows!(fp::FlowProblem; verbose::Bool=false)
 
-    #elist = edgelist(fp)
     starttime = time()
-
-    #println(edgelist(fp))
-    #println("Costs: ", costs(fp))
-    #println("Limits: ", limits(fp))
-    #println("Injections: ", injections(fp))
 
     majoriters = 0
     majoriters_multinode = 0
     minoriters = 0
 
     while true
-
-        #println("Flows: ", flows(fp))
-        #println("Prices: ", prices(fp))
-        #@assert complementaryslackness(fp)
 
         # Find a node with positive imbalance
         positiveimbalancenode = firstpositiveimbalance(fp)
@@ -50,7 +40,6 @@ function solveflows!(fp::FlowProblem; verbose::Bool=false)
                 majoriters_singlenode, " single-node major iterations, ",
                 majoriters_multinode, " multi-node major iterations with ",
                 minoriters, " multi-node minor iterations")
-        #println("Average ", minoriters/majoriters, " minor iterations per major multi-node iteration")
         println("Solved in ", elapsedtime, "s")
     end
 

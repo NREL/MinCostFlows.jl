@@ -3,29 +3,24 @@ function multinodeupdate!(fp::FlowProblem, augmentingpathstart::Node)
     iters = 0
 
     # Reset the scan sets for this iteration
-    #println("Running multi-node major iteration")
     resetSL!(fp, augmentingpathstart)
-    #showSL(fp)
 
     while true
 
         iters += 1
-        #println("Running multi-node minor iteration")
 
         # Look for a candidate node i to scan and add to S
         i = augmentS!(fp)
-        #showSL(fp)
 
         # Update prices if it will improve the dual solution
         # or if there are no nodes left to scan
-        if i === nothing || dualascendable(fp)
+        if i === nothing || (fp.ascentgradient > 0)
             updateprices!(fp)
             break
         end
 
         # Label neighbour nodes of i
         augmentingpathend = augmentL!(fp, i)
-        #showSL(fp)
 
         # Didn't find an augmenting path, try adding a different node
         augmentingpathend === nothing && continue
@@ -44,8 +39,6 @@ end
 Empties the set S and reduces the set L to a single element, `j`
 """
 function resetSL!(fp::FlowProblem, j::Node)
-
-    #println("Resetting SL...")
 
     node = fp.firstS
     while node !== nothing
@@ -79,7 +72,6 @@ to S. If S == L, return `nothing` and make no changes.
 """
 function augmentS!(fp::FlowProblem)
 
-    #println("Augmenting S...")
     i = fp.firstLnotS
     i === nothing && return nothing
 
@@ -116,24 +108,12 @@ function augmentS!(fp::FlowProblem)
 end
 
 """
-Checks whether the current set S would increase the
-dual objective function if prices were updated
-"""
-function dualascendable(fp::FlowProblem)
-
-    #println("Gradient: ", fp.ascentgradient)
-    return fp.ascentgradient > 0
-
-end
-
-"""
 Add nodes to L that are adjacent to `i` and satisfy inclusion criteria,
 returning one such added node that has a positive imbalance
 (or `nothing` if none exist). Subset of Step 2 in Bertsekas.
 """
 function augmentL!(fp::FlowProblem, i::N)::Union{N,Nothing} where {N<:Node}
 
-    #println("Augmenting L...")
     negativeimbalancenode = nothing
 
     # Iterate through balanced edges ji connecting j to i
@@ -194,7 +174,6 @@ Updates the flows on the augmenting path from `startnode` to `endnode`
 """
 function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
 
-    #println("Updating flows...")
     delta = min(startnode.imbalance, -endnode.imbalance)
 
     # First pass, determine value of delta
@@ -248,43 +227,7 @@ Updates the shadow prices (and potentially flows) of the elements of S
 """
 function updateprices!(fp::FlowProblem)
 
-    #function printedge(edge::Edge)
-    #    a = nodeidx(fp, edge.nodefrom)
-    #    b = nodeidx(fp, edge.nodeto)
-    #    rc = edge.reducedcost
-    #    fl = edge.flow
-    #    return "$a=>$b(rc=$rc, flow=$fl)"
-    #end
-
-    #println("Updating prices...")
     gamma = typemax(Int)
-
-    #i = fp.firstS
-    #while i !== nothing
-
-        #i_idx = nodeidx(fp, i)
-
-        #println("Edges to $(i_idx):")
-        #printlist(i, :firstto, :nextto, printedge)
-        #print("Active: ")
-        #printlist(i, :firstactiveto, :nextactiveto, printedge)
-        #print("Balanced: ")
-        #printlist(i, :firstbalancedto, :nextbalancedto, printedge)
-        #print("Inactive: ")
-        #printlist(i, :firstinactiveto, :nextinactiveto, printedge)
-
-        #println("Edges from $(i_idx):")
-        #printlist(i, :firstfrom, :nextfrom, printedge)
-        #print("Active: ")
-        #printlist(i, :firstactivefrom, :nextactivefrom, printedge)
-        #print("Balanced: ")
-        #printlist(i, :firstbalancedfrom, :nextbalancedfrom, printedge)
-        #print("Inactive: ")
-        #printlist(i, :firstinactivefrom, :nextinactivefrom, printedge)
-
-        #i = i.nextS
-
-    #end
 
     # TODO: Search with S or notS, based on set sizes
     #       (but will managing the notS list pay for itself?)

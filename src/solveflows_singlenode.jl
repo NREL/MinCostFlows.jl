@@ -3,13 +3,11 @@ Returns true if the process updated flows or prices, and false otherwise.
 """
 function singlenodeupdate!(fp::FlowProblem, i::Node)
 
-    #println("Running single-node major iteration...")
     statechanged = false
     x = imbalancecomparator(i)
 
     while true
 
-        #println("Running single-node minor iteration...")
         # Step 1: Compare i.imbalance with B+ and B- room
         if i.imbalance >= x
 
@@ -18,10 +16,6 @@ function singlenodeupdate!(fp::FlowProblem, i::Node)
             maxminflows!(i)
             updateprice!(i)
             statechanged = true
-
-            #println("Updating flows and prices")
-            #println("Flows: ", flows(fp))
-            #println("Prices: ", prices(fp))
 
             if i.imbalance > 0
                 x = imbalancecomparator(i)
@@ -34,9 +28,6 @@ function singlenodeupdate!(fp::FlowProblem, i::Node)
 
             # Step 2 or 3: Flow adjustment
             if updateoutgoingflow!(i) || updateincomingflow!(i)
-                #println("Updating single-line flow")
-                #println("Flows: ", flows(fp))
-                #println("Prices: ", prices(fp))
                 statechanged = true
                 continue
             else

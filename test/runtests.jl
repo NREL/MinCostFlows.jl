@@ -215,7 +215,7 @@ verbose = false
 
         N, E = 200, 400
 
-        for i in 1:250
+        for i in 1:500
 
             fp = randomproblem(N, E)
             @test MinCostFlow.complementaryslackness(fp) # Initialization should satisfy CS
@@ -246,7 +246,7 @@ verbose = false
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         # Randomly modify problem and re-solve
-        for i in 1:250
+        for i in 1:500
 
             # Update injections and rebalance at fallback node
             for n in 1:N
@@ -274,17 +274,19 @@ verbose = false
 
     end
 
-    if true
+    if false
 
+        Profile.init(delay=0.0001)
         Random.seed!(1234)
         @profile zeros(1)
         Profile.clear()
         N = 200; E = 400
-        println("n = $N, e = $E")
+        nresolves = 999
+        println("n = $N, e = $E, $nresolves resolves")
         fp = randomproblem(N, E)
         @profile solveflows!(fp)
 
-        for _ in 1:999
+        for _ in 1:nresolves
 
             # Update injections and rebalance at fallback node
             for n in 1:N
