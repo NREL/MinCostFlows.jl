@@ -7,8 +7,6 @@ function solveflows!(fp::FlowProblem; verbose::Bool=false)
     #elist = edgelist(fp)
     starttime = time()
 
-    calculateimbalances!(fp)
-
     #println(edgelist(fp))
     #println("Costs: ", costs(fp))
     #println("Limits: ", limits(fp))
@@ -70,53 +68,6 @@ function firstpositiveimbalance(fp::FlowProblem)
         (node.imbalance > 0) && return node
     end
     return nothing
-end
-
-# TODO: Should probably recalculate these on the fly instead (whenever flow is updated)
-function calculateimbalances!(fp::FlowProblem)
-
-    for node in fp.nodes
-        node.imbalance = node.injection
-    end
-
-    for edge in fp.edges
-        edge.nodefrom.imbalance -= edge.flow
-        edge.nodeto.imbalance += edge.flow
-    end
-
-end
-
-# #TODO: Should do this on the fly / with iterative updates instead
-function calculateascentgradient!(fp::FlowProblem)
-
-    fp.ascentgradient = 0
-    i = fp.firstS
-    while i !== nothing
-
-        ij = i.firstbalancedfrom
-        while ij !== nothing
-            !ij.nodeto.inS && (fp.ascentgradient -= ij.limit)
-            ij = ij.nextbalancedfrom
-        end
-
-        ij = i.firstactivefrom
-        while ij !== nothing
-            !ij.nodeto.inS && (fp.ascentgradient -= ij.limit)
-            ij = ij.nextactivefrom
-        end
-
-        ji = i.firstactiveto
-        while ji !== nothing
-            !ji.nodefrom.inS && (fp.ascentgradient += ji.limit)
-            ji = ji.nextactiveto
-        end
-
-        fp.ascentgradient += i.injection
-
-        i = i.nextS
-
-    end
-
 end
 
 function decreasereducedcost!(i::Node, ij::Edge{Node}, j::Node, pricechange::Int)

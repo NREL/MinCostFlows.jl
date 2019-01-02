@@ -35,7 +35,7 @@ macro remove!(context::Symbol, first::QuoteNode, next::QuoteNode)
         oldfirstelem = getproperty(context_val, $first)
 
         if oldfirstelem !== nothing # nothing to do for an empty list
-            newfirstelem = getproperty(oldfirstelem, $next)
+            newfirstelem = getproperty(oldfirstelem, $next) # Type uncertainty here bottlenecks
             setproperty!(context_val, $first, newfirstelem)
         end
 

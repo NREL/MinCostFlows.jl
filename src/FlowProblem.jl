@@ -49,9 +49,7 @@ mutable struct Node <: AbstractNode
     lastactiveto::Union{Edge{Node},Nothing}
     augpathprev::Union{Edge{Node},Nothing}
     nextS::Union{Node,Nothing}
-    prevS::Union{Node,Nothing}
     nextLnotS::Union{Node,Nothing}
-    prevLnotS::Union{Node,Nothing}
     injection::Int
     price::Int
     imbalance::Int
@@ -62,17 +60,15 @@ mutable struct Node <: AbstractNode
                                nothing, nothing, nothing, nothing,
                                nothing, nothing, nothing, nothing,
                                nothing, nothing, nothing, nothing,
-                               nothing, nothing, nothing,
-                               injection, 0, injection, false, false)
+                               nothing, injection, 0, injection, false, false)
+
 end
 
 mutable struct FlowProblem
     nodes::Vector{Node}
     edges::Vector{Edge{Node}}
     firstS::Union{Node,Nothing}
-    lastS::Union{Node,Nothing}
     firstLnotS::Union{Node,Nothing}
-    lastLnotS::Union{Node,Nothing}
     ascentgradient::Int
 end
 
@@ -127,7 +123,7 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
 
     end
 
-    return FlowProblem(nodes, edges, nothing, nothing, nothing, nothing, 0)
+    return FlowProblem(nodes, edges, nothing, nothing, 0)
 
 end
 
@@ -147,3 +143,7 @@ function next(f::Function, v::Vector, start::Int)
     return nothing
 
 end
+
+add_LnotS!(node::Node, fp::FlowProblem) = (@addstart!(node, :nextLnotS, fp, :firstLnotS); nothing)
+removefirst_LnotS!(fp::FlowProblem) = (@remove!(fp, :firstLnotS, :nextLnotS); nothing)
+add_S!(node::Node, fp::FlowProblem) = (@addstart!(node, :nextS, fp, :firstS); nothing)

@@ -1,5 +1,3 @@
-using InteractiveUtils
-
 @testset "Link Operations" begin
 
     @testset "Singly-Linked Lists" begin
@@ -25,7 +23,6 @@ using InteractiveUtils
         @test l1.nxt === l2
         @test l2.nxt === nothing
 
-        @macroexpand MinCostFlow.@remove!(ctx, :fst, :nxt)
         MinCostFlow.@remove!(ctx, :fst, :nxt)
         @test ctx.fst === l2
         @test l2.nxt === nothing

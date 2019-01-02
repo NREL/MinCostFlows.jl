@@ -13,7 +13,7 @@ function multinodeupdate!(fp::FlowProblem, augmentingpathstart::Node)
         #println("Running multi-node minor iteration")
 
         # Look for a candidate node i to scan and add to S
-        i = augmentS!(fp) # ~ 1/3 of time here
+        i = augmentS!(fp)
         #showSL(fp)
 
         # Update prices if it will improve the dual solution
@@ -24,7 +24,7 @@ function multinodeupdate!(fp::FlowProblem, augmentingpathstart::Node)
         end
 
         # Label neighbour nodes of i
-        augmentingpathend = augmentL!(fp, i) # ~ 2/3 of time here
+        augmentingpathend = augmentL!(fp, i)
         #showSL(fp)
 
         # Didn't find an augmenting path, try adding a different node
@@ -62,14 +62,11 @@ function resetSL!(fp::FlowProblem, j::Node)
 
     # Reset S to {}
     fp.firstS = nothing
-    fp.lastS = nothing
     fp.ascentgradient = 0
 
     # Reset L to {j}
     fp.firstLnotS = j
-    j.prevLnotS = nothing
     j.nextLnotS = nothing
-    fp.lastLnotS = j
     j.inL = true
 
     return nothing
@@ -88,8 +85,8 @@ function augmentS!(fp::FlowProblem)
 
     # i joins S and leaves LnotS
     i.inS = true
-    @addend!(i, :prevS, :nextS, fp, :firstS, :lastS)
-    @remove!(i, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
+    add_S!(i, fp)
+    removefirst_LnotS!(fp)
 
     # Update the ascent gradient with i included in S
     ij = i.firstbalancedfrom
@@ -149,7 +146,7 @@ function augmentL!(fp::FlowProblem, i::N)::Union{N,Nothing} where {N<:Node}
 
             # Add j to LnotS
             j.inL = true
-            @addend!(j, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
+            add_LnotS!(j, fp)
 
             # Save path back to i
             j.augpathprev = ji
@@ -173,7 +170,7 @@ function augmentL!(fp::FlowProblem, i::N)::Union{N,Nothing} where {N<:Node}
 
             # Add j to LnotS
             j.inL = true
-            @addend!(j, :prevLnotS, :nextLnotS, fp, :firstLnotS, :lastLnotS)
+            add_LnotS!(j, fp)
 
             # Save path back to i
             j.augpathprev = ij
@@ -231,15 +228,17 @@ function updateflows!(fp::FlowProblem, startnode::Node, endnode::Node)
 
         if b === currentnode # ab is a forward edge, move to node a
             ab.flow += delta
+            a.imbalance -= delta
+            b.imbalance += delta
             currentnode = a
         else # ab is a backward edge, move to node b
             ab.flow -= delta
+            a.imbalance += delta
+            b.imbalance -= delta
             currentnode = b
         end
 
     end
-
-    calculateimbalances!(fp) #TODO: Do this on the fly instead
 
 end
 
@@ -288,6 +287,7 @@ function updateprices!(fp::FlowProblem)
     #end
 
     # TODO: Search with S or notS, based on set sizes
+    #       (but will managing the notS list pay for itself?)
     i = fp.firstS
     while i !== nothing
 
@@ -295,20 +295,30 @@ function updateprices!(fp::FlowProblem)
         # Adjust flows on balanced lines in to / out of S
         ij = i.firstbalancedfrom
         while ij !== nothing
-            !ij.nodeto.inS && (ij.flow = ij.limit)
+            if !ij.nodeto.inS
+                increase = ij.limit - ij.flow
+                ij.flow = ij.limit
+                i.imbalance -= increase
+                ij.nodeto.imbalance += increase
+            end
             ij = ij.nextbalancedfrom
         end
 
         ji = i.firstbalancedto
         while ji !== nothing
-            !ji.nodefrom.inS && (ji.flow = 0)
+            if !ji.nodefrom.inS
+                decrease = ji.flow
+                ji.flow = 0
+                ji.nodefrom.imbalance += decrease
+                i.imbalance -= decrease
+             end
             ji = ji.nextbalancedto
         end
 
         # Determine gamma from active / inactive lines in to / out of S
         ij = i.firstinactivefrom
         while ij !== nothing
-            !ij.nodeto.inS && (gamma = min(gamma, ij.reducedcost))
+            !ij.nodeto.inS && (gamma = min(gamma, ij.reducedcost)) # Promotion impacting performance here?
             ij = ij.nextinactivefrom
         end
 
@@ -323,10 +333,6 @@ function updateprices!(fp::FlowProblem)
     end
 
     gamma === typemax(Int) && error("gamma === typemax(Int)")
-
-    # Flows have changed, so recalculate imbalances
-    # TODO: Do this more intelligently on the fly
-    calculateimbalances!(fp)
 
     # Adjust node prices and edge reduced costs
     i = fp.firstS
@@ -364,9 +370,5 @@ function updateprices!(fp::FlowProblem)
         i = i.nextS
 
     end
-
-    # Prices have changed, so recalculate ascent gradient
-    # TODO: Do this more intelligently on the fly
-    calculateascentgradient!(fp)
 
 end

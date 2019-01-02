@@ -9,12 +9,13 @@ using Random
 
 include("utils.jl")
 include("listutils.jl")
-verbose = true
+verbose = false
 
 @testset "MinCostFlow" begin
 
     include("lists.jl")
 
+    if true
     @testset "Example networks" begin
 
         @testset "Bertsekas page 220" begin
@@ -283,7 +284,7 @@ verbose = true
         fp = randomproblem(N, E)
         @profile solveflows!(fp)
 
-        for _ in 1:9
+        for _ in 1:999
 
             # Update injections and rebalance at fallback node
             for n in 1:N
@@ -303,6 +304,6 @@ verbose = true
         Profile.print(maxdepth=14)
 
     end
-
+    end
 end
 
