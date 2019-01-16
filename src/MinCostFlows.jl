@@ -1,4 +1,4 @@
-module MinCostFlow
+module MinCostFlows
 
 export
     FlowProblem,
