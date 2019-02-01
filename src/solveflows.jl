@@ -4,7 +4,7 @@ min-cost flow problems, as described in Bertsekas (1998)
 """
 function solveflows!(fp::FlowProblem; verbose::Bool=false)
 
-    starttime = time()
+    verbose && (starttime = time())
 
     majoriters = 0
     majoriters_multinode = 0
@@ -32,8 +32,8 @@ function solveflows!(fp::FlowProblem; verbose::Bool=false)
 
     end
 
-    endtime = time()
     if verbose
+        endtime = time()
         elapsedtime = endtime - starttime
         majoriters_singlenode = majoriters - majoriters_multinode
         println(majoriters, " major iterations: ",
