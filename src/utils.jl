@@ -69,3 +69,28 @@ function complementaryslackness(fp::FlowProblem)
 
 end
 
+function flowbalance(fp::FlowProblem)
+
+    for node in fp.nodes
+
+        imbalance = node.injection
+
+        edge = node.firstfrom
+        while edge !== nothing
+            imbalance -= edge.flow
+            edge = edge.nextfrom
+        end
+
+        edge = node.firstto
+        while edge !== nothing
+            imbalance += edge.flow
+            edge = edge.nextto
+        end
+
+        (node.imbalance != imbalance) && return false
+
+    end
+
+    return true
+
+end

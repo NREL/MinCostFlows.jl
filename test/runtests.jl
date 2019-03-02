@@ -75,6 +75,32 @@ verbose = false
     @testset "Previously problematic problems" begin
 
         fp = FlowProblem(
+            [1, 1, 2, 2, 3, 3, 1, 2, 3, 4, 5, 6,
+             4, 5, 6, 1, 2, 3, 10, 10, 10, 10, 10, 10],
+            [2, 3, 3, 1, 1, 2, 10, 10, 10, 1, 2, 3,
+             10, 10, 10, 7, 8, 9, 7, 8, 9, 1, 2, 3],
+            [8, 8, 8, 8, 8, 8, 999999, 999999, 999999, 999999, 999999, 999999,
+             999999, 999999, 999999, 999999, 999999, 999999,
+             999999, 999999, 999999, 999999, 999999, 999999],
+            [1, 1, 1, 1, 1, 1, 0, 0, 0, 10, 10, 10, 0, 0, 0, -9, -9, -9,
+             0, 0, 0, 9999, 9999, 9999],
+            [-9, 2, 19, 0, 0, 0, 0, 0, 0, -12]
+        )
+
+        @test MinCostFlows.complementaryslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlows.flowbalance(fp) # Flow accounting should be internally consistent
+
+        lp = linprog(fp) # Will complain if infeasible
+        solveflows!(fp)
+
+        @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
+        @test MinCostFlows.flowbalance(fp) # Flow accounting should remain internally consistent
+        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
+
+
+
+        fp = FlowProblem(
             [32, 17, 37, 39, 20, 29, 3, 12, 1, 14, 33, 25, 12, 17, 1, 3, 18,
              38, 1, 32, 37, 15, 19, 39, 12, 1, 34, 28, 34, 5, 18, 15, 13, 9,
              12, 23, 32, 3, 16, 40, 17, 8, 27, 7, 9, 28, 18, 20, 4, 32, 8, 5,
@@ -126,11 +152,13 @@ verbose = false
         )
 
         @test MinCostFlows.complementaryslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlows.flowbalance(fp)
 
         lp = linprog(fp) # Will complain if infeasible
         solveflows!(fp)
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
+        @test MinCostFlows.flowbalance(fp)
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
@@ -187,11 +215,13 @@ verbose = false
              19, -10, -15, -10, 15, 12, 16, -18, 104])
 
         @test MinCostFlows.complementaryslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlows.flowbalance(fp)
 
         lp = linprog(fp) # Will complain if infeasible
         solveflows!(fp)
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
+        @test MinCostFlows.flowbalance(fp)
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
@@ -201,11 +231,13 @@ verbose = false
                          [19,9,3,9,9999,9999,9999,9999,9999,9999,9999,9999],
                          [1,1,5,2,0,0,0,0,9999,9999,9999,9999], [-2,-7,4,-12,17])
         @test MinCostFlows.complementaryslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlows.flowbalance(fp)
 
         lp = linprog(fp) # Will complain if infeasible
         solveflows!(fp)
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
+        @test MinCostFlows.flowbalance(fp)
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
@@ -215,15 +247,17 @@ verbose = false
 
         N, E = 200, 400
 
-        for i in 1:500
+        for i in 1:1000
 
             fp = randomproblem(N, E)
             @test MinCostFlows.complementaryslackness(fp) # Initialization should satisfy CS
+            @test MinCostFlows.flowbalance(fp)
 
             lp = linprog(fp) # Will complain if infeasible
             solveflows!(fp)
 
             @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
+            @test MinCostFlows.flowbalance(fp)
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
             @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
@@ -237,16 +271,18 @@ verbose = false
 
         fp = randomproblem(N, E)
         @test MinCostFlows.complementaryslackness(fp) # Initialization should satisfy CS
+        @test MinCostFlows.flowbalance(fp)
 
         lp = linprog(fp)
         solveflows!(fp, verbose=verbose)
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
+        @test MinCostFlows.flowbalance(fp)
         @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         # Randomly modify problem and re-solve
-        for i in 1:500
+        for i in 1:1000
 
             # Update injections and rebalance at fallback node
             for n in 1:N
@@ -261,12 +297,14 @@ verbose = false
 
             # Ensure updates preserved CS
             @test MinCostFlows.complementaryslackness(fp)
+            @test MinCostFlows.flowbalance(fp)
 
             # Re-solve
             lp = linprog(fp)
             solveflows!(fp, verbose=verbose)
 
             @test MinCostFlows.complementaryslackness(fp)
+            @test MinCostFlows.flowbalance(fp)
             @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
             @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 

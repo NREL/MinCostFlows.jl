@@ -29,7 +29,7 @@ function randomproblem(n::Int, e::Int)
     nodesto = nodesto[fromto_idxs]
 
     flowlimits = rand(1:20, e)
-    flowcosts = rand(1:5, e)
+    flowcosts = rand(-5:5, e)
     injections = rand(-20:20, n)
 
     # Add fallback node

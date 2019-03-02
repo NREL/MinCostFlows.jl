@@ -23,10 +23,21 @@ mutable struct Edge{T<:AbstractNode}
     reducedcost::Int
     flow::Int
 
-    Edge{}(from::T, to::T, limit::Int, cost::Int) where {T <: AbstractNode} =
+    function Edge{}(from::T, to::T, limit::Int, cost::Int) where {T <: AbstractNode}
+
+        if cost < 0 # Edge will start active, flow must be maxed
+            from.imbalance -= limit
+            to.imbalance += limit
+            flow = limit
+        else # Edge will start balanced or inactive, flow can be zero
+            flow = 0
+        end
+
         new{T}(from, to, nothing, nothing, nothing, nothing, nothing, nothing,
                nothing, nothing, nothing, nothing,
-               nothing, nothing, nothing, nothing, limit, cost, cost, 0)
+               nothing, nothing, nothing, nothing, limit, cost, cost, flow)
+    end
+
 end
 
 # TODO: These likely don't all need to be doubly-linked lists,
@@ -103,21 +114,31 @@ function FlowProblem(nodesfrom::Vector{Int}, nodesto::Vector{Int},
 
             # Add edge to nodefrom's balancedfrom adjacency list
             @addend!(edge, :prevbalancedfrom, :nextbalancedfrom,
-                    nodefrom, :firstbalancedfrom, :lastbalancedfrom)
+                     nodefrom, :firstbalancedfrom, :lastbalancedfrom)
 
             # Add edge to nodeto's balancedto adjacency list
             @addend!(edge, :prevbalancedto, :nextbalancedto,
-                    nodeto, :firstbalancedto, :lastbalancedto)
+                     nodeto, :firstbalancedto, :lastbalancedto)
 
-        else # Inactive edge (as no active edges with zero-price initialization)
+        elseif edge.reducedcost > 0  # Inactive edge
 
             # Add edge to nodefrom's inactivefrom adjacency list
             @addend!(edge, :previnactivefrom, :nextinactivefrom,
-                    nodefrom, :firstinactivefrom, :lastinactivefrom)
+                     nodefrom, :firstinactivefrom, :lastinactivefrom)
 
             # Add edge to nodeto's inactiveto adjacency list
             @addend!(edge, :previnactiveto, :nextinactiveto,
-                    nodeto, :firstinactiveto, :lastinactiveto)
+                     nodeto, :firstinactiveto, :lastinactiveto)
+
+        else # Active edge
+
+            # Add edge to nodefrom's activefrom adjacency list
+            @addend!(edge, :prevactivefrom, :nextactivefrom,
+                     nodefrom, :firstactivefrom, :lastactivefrom)
+
+            # Add edge to nodeto's activeto adjacency list
+            @addend!(edge, :prevactiveto, :nextactiveto,
+                     nodeto, :firstactiveto, :lastactiveto)
 
         end
 
