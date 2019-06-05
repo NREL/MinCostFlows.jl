@@ -243,6 +243,16 @@ verbose = false
 
     end
 
+    @testset "Infeasible Problems" begin
+
+        fp = FlowProblem([1,2,2,1,4,4], [4,1,4,3,3,1], [0,10,0,-9,0,9999],
+                         [999999,999999,999999,999999,999999,999999],
+                         [-11, 0, 1, 10])
+
+        @test_throws ErrorException solveflows!(fp)
+
+    end
+
     @testset "Random Networks" begin
 
         N, E = 200, 400

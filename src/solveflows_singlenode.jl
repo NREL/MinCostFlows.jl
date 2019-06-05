@@ -113,6 +113,11 @@ function updateprice!(i::Node)
         ji = ji.nextactiveto
     end
 
+    if newprice === typemax(Int)
+        i.imbalance > 0 && error("Problem is infeasible")
+        return
+    end
+
     pricechange = newprice - i.price
     i.price = newprice
 

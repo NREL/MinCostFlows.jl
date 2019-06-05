@@ -16,9 +16,11 @@ function updateinjection!(targetnode::Node, slacknode::Node, newinj::Int)
 end
 
 """
-Change line limit on `edge` to `value` for a FlowProblem `fp`.
+Change line limit on `edge` to `newlimit` for a FlowProblem `fp`.
 """
 function updateflowlimit!(edge::Edge{Node}, newlimit::Int)
+
+    newlimit < 0 && error("New limit must be non-negative, received $newlimit")
 
     if (newlimit < edge.flow) || (edge.reducedcost < 0)
         change = edge.flow - newlimit

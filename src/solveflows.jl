@@ -16,6 +16,7 @@ function solveflows!(fp::FlowProblem; verbose::Bool=false)
         positiveimbalancenode = firstpositiveimbalance(fp)
 
         # If no starting node found, problem is either solved or infeasible
+        # TODO: Need to throw an exception if infeasible
         positiveimbalancenode === nothing && break
 
         majoriters += 1

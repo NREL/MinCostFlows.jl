@@ -275,7 +275,7 @@ function updateprices!(fp::FlowProblem)
 
     end
 
-    gamma === typemax(Int) && error("gamma === typemax(Int)")
+    gamma === typemax(Int) && error("Problem is infeasible")
 
     # Adjust node prices and edge reduced costs
     i = fp.firstS
