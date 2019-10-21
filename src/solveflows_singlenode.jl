@@ -126,14 +126,14 @@ function updateprice!(i::Node)
     # Edge out of i have reduced cost decreased by pricechange
     ij = i.firstfrom
     while ij !== nothing
-        decreasereducedcost!(i, ij, ij.nodeto, pricechange)
+        decreasereducedcost!(ij, pricechange)
         ij = ij.nextfrom
     end
 
     # Edge in to i have reduced cost increased by pricechange
     ji = i.firstto
     while ji !== nothing
-        increasereducedcost!(ji.nodefrom, ji, i, pricechange)
+        increasereducedcost!(ji, pricechange)
         ji = ji.nextto
     end
 

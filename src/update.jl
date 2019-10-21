@@ -62,10 +62,12 @@ function updateflowcost!(edge::Edge{Node}, newcost::Int)
     if oldreducedcost > 0
 
         if newreducedcost == 0 # Inactive to balanced
+
             removeinactive!(edge)
             addbalanced!(edge)
 
         elseif newreducedcost < 0 # Inactive to active
+
             maxflow!(edge)
             removeinactive!(edge)
             addactive!(edge)
@@ -75,11 +77,13 @@ function updateflowcost!(edge::Edge{Node}, newcost::Int)
     elseif oldreducedcost == 0
 
         if newreducedcost > 0 # Balanced to inactive
+
             minflow!(edge)
             removebalanced!(edge)
             addinactive!(edge)
 
         elseif newreducedcost < 0 # Balanced to active
+
             maxflow!(edge)
             removebalanced!(edge)
             addactive!(edge)
@@ -89,11 +93,13 @@ function updateflowcost!(edge::Edge{Node}, newcost::Int)
     else # oldreducedcost < 0
 
         if newreducedcost > 0 # Active to inactive
+
             minflow!(edge)
             removeactive!(edge)
             addinactive!(edge)
 
         elseif newreducedcost == 0 # Active to balanced
+
             removeactive!(edge)
             addbalanced!(edge)
 
@@ -124,93 +130,6 @@ function minflow!(edge::Edge)
     edge.flow = 0
     edge.nodefrom.imbalance += flowdecrease
     edge.nodeto.imbalance -= flowdecrease
-
-    return
-
-end
-
-function removeinactive!(edge::Edge)
-
-    fromnode = edge.nodefrom
-    tonode = edge.nodeto
-
-    @remove!(edge, :previnactivefrom, :nextinactivefrom,
-             fromnode, :firstinactivefrom, :lastinactivefrom)
-    @remove!(edge, :previnactiveto, :nextinactiveto,
-             tonode, :firstinactiveto, :lastinactiveto)
-
-    return
-
-end
-
-function removebalanced!(edge::Edge)
-
-    fromnode = edge.nodefrom
-    tonode = edge.nodeto
-
-    @remove!(edge, :prevbalancedfrom, :nextbalancedfrom,
-             fromnode, :firstbalancedfrom, :lastbalancedfrom)
-    @remove!(edge, :prevbalancedto, :nextbalancedto,
-             tonode, :firstbalancedto, :lastbalancedto)
-
-    return
-
-end
-
-function removeactive!(edge::Edge)
-
-    fromnode = edge.nodefrom
-    tonode = edge.nodeto
-
-    @remove!(edge, :prevactivefrom, :nextactivefrom,
-             fromnode, :firstactivefrom, :lastactivefrom)
-    @remove!(edge, :prevactiveto, :nextactiveto,
-             tonode, :firstactiveto, :lastactiveto)
-
-    return
-
-end
-
-function addinactive!(edge::Edge)
-
-    fromnode = edge.nodefrom
-    tonode = edge.nodeto
-
-    @addend!(edge, :previnactivefrom, :nextinactivefrom,
-             fromnode, :firstinactivefrom, :lastinactivefrom)
-
-    @addend!(edge, :previnactiveto, :nextinactiveto,
-             tonode, :firstinactiveto, :lastinactiveto)
-
-    return
-
-end
-
-function addbalanced!(edge::Edge)
-
-    fromnode = edge.nodefrom
-    tonode = edge.nodeto
-
-    @addend!(edge, :prevbalancedfrom, :nextbalancedfrom,
-             fromnode, :firstbalancedfrom, :lastbalancedfrom)
-
-    @addend!(edge, :prevbalancedto, :nextbalancedto,
-             tonode, :firstbalancedto, :lastbalancedto)
-
-    return
-
-end
-
-function addactive!(edge::Edge)
-
-    fromnode = edge.nodefrom
-    tonode = edge.nodeto
-
-    @addend!(edge, :prevactivefrom, :nextactivefrom,
-             fromnode, :firstactivefrom, :lastactivefrom)
-
-    @addend!(edge, :prevactiveto, :nextactiveto,
-             tonode, :firstactiveto, :lastactiveto)
 
     return
 

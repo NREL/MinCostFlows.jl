@@ -291,7 +291,7 @@ function updateprices!(fp::FlowProblem)
             j = ij.nodeto
 
             # S->S edges don't change
-            j.inS || decreasereducedcost!(i, ij, j, gamma)
+            j.inS || decreasereducedcost!(ij, gamma)
 
             ij = ij.nextfrom
 
@@ -304,7 +304,7 @@ function updateprices!(fp::FlowProblem)
             j = ji.nodefrom
 
             # S->S edges don't change
-            j.inS || increasereducedcost!(j, ji, i, gamma)
+            j.inS || increasereducedcost!(ji, gamma)
 
             ji = ji.nextto
 

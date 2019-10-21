@@ -60,7 +60,7 @@ function firstpositiveimbalance(fp::FlowProblem)
     return nothing
 end
 
-function decreasereducedcost!(i::Node, ij::Edge{Node}, j::Node, pricechange::Int)
+function decreasereducedcost!(ij::Edge{Node}, pricechange::Int)
 
     oldreducedcost = ij.reducedcost
     newreducedcost = oldreducedcost - pricechange # Price change assumed positive on node i
@@ -68,45 +68,19 @@ function decreasereducedcost!(i::Node, ij::Edge{Node}, j::Node, pricechange::Int
 
     if oldreducedcost === 0 # ij moved from balanced -> active
 
-        # Remove edge from i's balancedfrom adjacency list
-        @remove!(ij, :prevbalancedfrom, :nextbalancedfrom,
-                i, :firstbalancedfrom, :lastbalancedfrom)
-
-        # Remove edge from j's balancedto adjacency list
-        @remove!(ij, :prevbalancedto, :nextbalancedto,
-                j, :firstbalancedto, :lastbalancedto)
-
-        # Add edge to i's activefrom adjacency list
-        @addend!(ij, :prevactivefrom, :nextactivefrom,
-                i, :firstactivefrom, :lastactivefrom)
-
-        # Add edge to j's activeto adjacency list
-        @addend!(ij, :prevactiveto, :nextactiveto,
-                j, :firstactiveto, :lastactiveto)
+        removebalanced!(ij)
+        addactive!(ij)
 
     elseif newreducedcost === 0 # ij moved from inactive -> balanced
 
-        # Remove edge from i's inactivefrom adjacency list
-        @remove!(ij, :previnactivefrom, :nextinactivefrom,
-                i, :firstinactivefrom, :lastinactivefrom)
-
-        # Remove edge from j's inactiveto adjacency list
-        @remove!(ij, :previnactiveto, :nextinactiveto,
-                j, :firstinactiveto, :lastinactiveto)
-
-        # Add edge to i's balancedfrom adjacency list
-        @addend!(ij, :prevbalancedfrom, :nextbalancedfrom,
-                i, :firstbalancedfrom, :lastbalancedfrom)
-
-        # Add edge to j's balancedto adjacency list
-        @addend!(ij, :prevbalancedto, :nextbalancedto,
-                j, :firstbalancedto, :lastbalancedto)
+        removeinactive!(ij)
+        addbalanced!(ij)
 
     end
 
 end
 
-function increasereducedcost!(i::Node, ij::Edge{Node}, j::Node, pricechange::Int)
+function increasereducedcost!(ij::Edge{Node}, pricechange::Int)
 
     oldreducedcost = ij.reducedcost
     newreducedcost = oldreducedcost + pricechange # Price change assumed positive on node j
@@ -114,39 +88,13 @@ function increasereducedcost!(i::Node, ij::Edge{Node}, j::Node, pricechange::Int
 
     if oldreducedcost === 0 # ij moved from balanced -> inactive
 
-        # Remove edge from i's balancedfrom adjacency list
-        @remove!(ij, :prevbalancedfrom, :nextbalancedfrom,
-                i, :firstbalancedfrom, :lastbalancedfrom)
-
-        # Remove edge from j's balancedto adjacency list
-        @remove!(ij, :prevbalancedto, :nextbalancedto,
-                j, :firstbalancedto, :lastbalancedto)
-
-        # Add edge to i's inactivefrom adjacency list
-        @addend!(ij, :previnactivefrom, :nextinactivefrom,
-                i, :firstinactivefrom, :lastinactivefrom)
-
-        # Add edge to j's inactiveto adjacency list
-        @addend!(ij, :previnactiveto, :nextinactiveto,
-                j, :firstinactiveto, :lastinactiveto)
+        removebalanced!(ij)
+        addinactive!(ij)
 
     elseif newreducedcost === 0 # ji moved from active -> balanced
 
-        # Remove edge from i's activefrom adjacency list
-        @remove!(ij, :prevactivefrom, :nextactivefrom,
-                i, :firstactivefrom, :lastactivefrom)
-
-        # Remove edge from j's activeto adjacency list
-        @remove!(ij, :prevactiveto, :nextactiveto,
-                j, :firstactiveto, :lastactiveto)
-
-        # Add edge to i's balancedfrom adjacency list
-        @addend!(ij, :prevbalancedfrom, :nextbalancedfrom,
-                i, :firstbalancedfrom, :lastbalancedfrom)
-
-        # Add edge to j's balancedto adjacency list
-        @addend!(ij, :prevbalancedto, :nextbalancedto,
-                j, :firstbalancedto, :lastbalancedto)
+        removeactive!(ij)
+        addbalanced!(ij)
 
     end
 
