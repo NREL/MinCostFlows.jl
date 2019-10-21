@@ -299,13 +299,20 @@ verbose = false
                 updateinjection!(fp.nodes[n], fp.nodes[N+1],
                                  fp.nodes[n].injection + rand(-3:3))
             end
+            @test MinCostFlows.complementaryslackness(fp)
+            @test MinCostFlows.flowbalance(fp)
 
             # Update flow limits
             for e in 1:E
                 updateflowlimit!(fp.edges[e], max(0, fp.edges[e].limit + rand(-3:3)))
             end
+            @test MinCostFlows.complementaryslackness(fp)
+            @test MinCostFlows.flowbalance(fp)
 
-            # Ensure updates preserved CS
+            # Update flow costs
+            for e in 1:E
+                updateflowcost!(fp.edges[e], fp.edges[e].cost + rand(-3:3))
+            end
             @test MinCostFlows.complementaryslackness(fp)
             @test MinCostFlows.flowbalance(fp)
 

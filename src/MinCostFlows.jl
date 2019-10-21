@@ -5,6 +5,7 @@ export
     solveflows!,
     updateinjection!,
     updateflowlimit!,
+    updateflowcost!,
     flows, costs, limits,
     injections, prices
 
