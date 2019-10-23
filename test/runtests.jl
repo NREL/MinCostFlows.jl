@@ -354,6 +354,11 @@ verbose = false
                 updateflowlimit!(fp.edges[e], max(0, fp.edges[e].limit + rand(-3:3)))
             end
 
+            # Update flow costs
+            for e in 1:E
+                updateflowcost!(fp.edges[e], fp.edges[e].cost + rand(-3:3))
+            end
+
             @profile solveflows!(fp)
 
         end
