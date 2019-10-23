@@ -1,7 +1,7 @@
 name = "MinCostFlows"
 uuid = "62286e6e-1779-56f1-888a-1c0056788ce0"
 author = ["Gord Stephen <gord.stephen@nrel.gov"]
-version = "0.1.1"
+version = "0.1.2"
 
 [extras]
 Clp = "e2554f3b-3117-50c0-817c-e040a3ddf72d"
