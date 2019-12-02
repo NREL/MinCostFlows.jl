@@ -149,18 +149,3 @@ Base.show(io::IO, fp::FlowProblem) =
 Base.print(io::IO, fp::FlowProblem) =
     print(io, "FlowProblem with $(length(fp.nodes)) nodes " *
               "and $(length(fp.edges)) edges")
-
-function next(f::Function, v::Vector, start::Int)
-
-    for i in start:length(v)
-        x = v[i]
-        f(x) && return x
-    end
-
-    return nothing
-
-end
-
-add_LnotS!(node::Node, fp::FlowProblem) = (@addstart!(node, :nextLnotS, fp, :firstLnotS); nothing)
-removefirst_LnotS!(fp::FlowProblem) = (@remove!(fp, :firstLnotS, :nextLnotS); nothing)
-add_S!(node::Node, fp::FlowProblem) = (@addstart!(node, :nextS, fp, :firstS); nothing)

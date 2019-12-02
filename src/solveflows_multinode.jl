@@ -315,3 +315,7 @@ function updateprices!(fp::FlowProblem)
     end
 
 end
+
+add_LnotS!(node::Node, fp::FlowProblem) = (@addstart!(node, :nextLnotS, fp, :firstLnotS); nothing)
+removefirst_LnotS!(fp::FlowProblem) = (@remove!(fp, :firstLnotS, :nextLnotS); nothing)
+add_S!(node::Node, fp::FlowProblem) = (@addstart!(node, :nextS, fp, :firstS); nothing)

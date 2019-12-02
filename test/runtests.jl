@@ -21,10 +21,13 @@ verbose = false
         @testset "Bertsekas page 220" begin
 
             fp = FlowProblem([1,2], [2,3], [5,5], [0,1], [1,0,-1])
+            println(fp)
+            println(fp.nodes, "\n", fp.edges)
+            println(MinCostFlows.edgelist(fp))
             @test MinCostFlows.complementaryslackness(fp) # Initialization should satisfy CS
 
             lp = linprog(fp)
-            solveflows!(fp)
+            solveflows!(fp, verbose=true)
 
             @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
             @test flows(fp) == [1,1]
