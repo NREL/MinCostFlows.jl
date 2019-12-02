@@ -40,6 +40,9 @@ mutable struct Edge{T<:AbstractNode}
 
 end
 
+Base.show(io::IO, e::Edge) = print(io, "Edge")
+Base.print(io::IO, e::Edge) = print(io, "Edge")
+
 # TODO: These likely don't all need to be doubly-linked lists,
 #       simplifying some might provide a small speedup?
 #       (would need a workaround during initialization though)
@@ -74,6 +77,9 @@ mutable struct Node <: AbstractNode
                                nothing, injection, 0, injection, false, false)
 
 end
+
+Base.show(io::IO, n::Node) = print(io, "Node")
+Base.print(io::IO, n::Node) = print(io, "Node")
 
 mutable struct FlowProblem
     nodes::Vector{Node}
@@ -135,6 +141,14 @@ costs(fp::FlowProblem) = getproperty.(fp.edges, :cost)
 limits(fp::FlowProblem) = getproperty.(fp.edges, :limit)
 injections(fp::FlowProblem) = getproperty.(fp.nodes, :injection)
 prices(fp::FlowProblem) = getproperty.(fp.nodes, :price)
+
+Base.show(io::IO, fp::FlowProblem) =
+    print(io, "FlowProblem with $(length(fp.nodes)) nodes " *
+              "and $(length(fp.edges)) edges")
+
+Base.print(io::IO, fp::FlowProblem) =
+    print(io, "FlowProblem with $(length(fp.nodes)) nodes " *
+              "and $(length(fp.edges)) edges")
 
 function next(f::Function, v::Vector, start::Int)
 
