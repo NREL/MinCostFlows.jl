@@ -2,14 +2,40 @@ using MinCostFlows
 using Test
 using LinearAlgebra
 using SparseArrays
-using MathProgBase
-using Clp
 using Profile
 using Random
 
 include("utils.jl")
 include("listutils.jl")
 verbose = false
+
+function primalobjective(fp::FlowProblem)
+
+    obj = 0
+
+    for edge in fp.edges
+        obj += edge.flow * edge.cost
+    end
+
+    return obj
+
+end
+
+function dualobjective(fp::FlowProblem)
+
+    obj = 0
+
+    for edge in fp.edges
+        edge.reducedcost < 0 && (obj += edge.reducedcost * edge.limit)
+    end
+
+    for node in fp.nodes
+        obj += node.price * node.injection
+    end
+
+    return obj
+
+end
 
 @testset "MinCostFlows" begin
 
@@ -34,6 +60,8 @@ verbose = false
             @test prices(fp) == [1,1,0]
             @test flows(fp) == lp.flows
 
+            @test primalobjective(fp) == dualobjective(fp)
+
         end
 
         @testset "Bertsekas page 237" begin
@@ -50,6 +78,8 @@ verbose = false
             @test prices(fp) == [9,4,0,0]
             @test flows(fp) == lp.flows
 
+            @test primalobjective(fp) == dualobjective(fp)
+
         end
 
         @testset "Ahuja, Magnanti, and Orlin page 421" begin
@@ -65,6 +95,8 @@ verbose = false
             @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
             @test flows(fp) == [6,3,0,4,2,3,0,4,5]
             @test flows(fp) == lp.flows
+
+            @test primalobjective(fp) == dualobjective(fp)
 
         end
 
@@ -98,7 +130,8 @@ verbose = false
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
         @test MinCostFlows.flowbalance(fp) # Flow accounting should remain internally consistent
-        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dualobjective(fp)
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
 
@@ -162,7 +195,8 @@ verbose = false
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
         @test MinCostFlows.flowbalance(fp)
-        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dualobjective(fp)
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
 
@@ -225,7 +259,8 @@ verbose = false
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
         @test MinCostFlows.flowbalance(fp)
-        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dualobjective(fp)
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
 
@@ -241,7 +276,8 @@ verbose = false
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
         @test MinCostFlows.flowbalance(fp)
-        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dot(lp.flows, costs(fp))
+            @test primalobjective(fp) == dualobjective(fp)
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
     end
@@ -271,7 +307,8 @@ verbose = false
 
             @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
             @test MinCostFlows.flowbalance(fp)
-            @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+            @test primalobjective(fp) == dot(lp.flows, costs(fp))
+            @test primalobjective(fp) == dualobjective(fp)
             @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         end
@@ -291,7 +328,8 @@ verbose = false
 
         @test MinCostFlows.complementaryslackness(fp) # Solving should preserve CS
         @test MinCostFlows.flowbalance(fp)
-        @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dot(lp.flows, costs(fp))
+        @test primalobjective(fp) == dualobjective(fp)
         @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         # Randomly modify problem and re-solve
@@ -325,7 +363,8 @@ verbose = false
 
             @test MinCostFlows.complementaryslackness(fp)
             @test MinCostFlows.flowbalance(fp)
-            @test dot(flows(fp), costs(fp)) == dot(lp.flows, costs(fp))
+            @test primalobjective(fp) == dot(lp.flows, costs(fp))
+            @test primalobjective(fp) == dualobjective(fp)
             @test buildAmatrix(fp) * flows(fp) == .-injections(fp)
 
         end

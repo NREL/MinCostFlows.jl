@@ -1,3 +1,6 @@
+using JuMP
+import Clp
+
 struct LPFlowSolution
     flows::Vector{Int}
     prices::Vector{Float64}
@@ -54,16 +57,21 @@ end
 """
 Formulate and solve an LP based on a FlowProblem.
 """
-function MathProgBase.linprog(fp::FlowProblem)
-    
+function linprog(fp::FlowProblem)
+
     A = buildAmatrix(fp)
 
-    result = linprog(Vector{Float64}(costs(fp)), A, '=', Vector{Float64}(.-injections(fp)),
-                     0., Vector{Float64}(limits(fp)), ClpSolver())
+    m = Model(Clp.Optimizer)
+    set_optimizer_attribute(m, "LogLevel", 0)
 
-    (result.status != :Optimal) && error("LP did not solve")
+    @variable(m, 0 <= flows[i=1:length(fp.edges)] <= fp.edges[i].limit)
+    @constraint(m, flowbalances, A * flows .== .-injections(fp))
+    @objective(m, Min, dot(flows, costs(fp)))
+    optimize!(m)
 
-    return LPFlowSolution(result.sol, result.attrs[:lambda])
+    (termination_status(m) == JuMP.MOI.OPTIMAL) || error("LP did not solve")
+
+    return LPFlowSolution(value.(flows), dual.(flowbalances))
 
 end
 
