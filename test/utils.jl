@@ -1,5 +1,5 @@
 using JuMP
-import Clp
+import HiGHS
 
 struct LPFlowSolution
     flows::Vector{Int}
@@ -61,8 +61,8 @@ function linprog(fp::FlowProblem)
 
     A = buildAmatrix(fp)
 
-    m = Model(Clp.Optimizer)
-    set_optimizer_attribute(m, "LogLevel", 0)
+    m = Model(HiGHS.Optimizer)
+    set_optimizer_attribute(m, "log_to_console", false)
 
     @variable(m, 0 <= flows[i=1:length(fp.edges)] <= fp.edges[i].limit)
     @constraint(m, flowbalances, A * flows .== .-injections(fp))
