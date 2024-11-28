@@ -1,7 +1,7 @@
 # MinCostFlows
 
-[![Build Status](https://travis-ci.org/NREL/MinCostFlows.jl.svg?branch=master)](https://travis-ci.org/NREL/MinCostFlows.jl)
-[![Coverage Status](https://coveralls.io/repos/github/NREL/MinCostFlows.jl/badge.svg?branch=master)](https://coveralls.io/github/NREL/MinCostFlows.jl?branch=master)
+[![Tests](https://github.com/NREL/MinCostFlows.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/NREL/MinCostFlows.jl/actions/workflows/CI.yml)
+[![Coverage](https://codecov.io/gh/NREL/MinCostFlows.jl/graph/badge.svg?token=QhINmAOLgW)](https://codecov.io/gh/NREL/MinCostFlows.jl)
 
 Efficiently solves min-cost network flow problems using the Relaxation
 dual ascent method of Bertsekas (1985), including support for parameter
